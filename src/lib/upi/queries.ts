@@ -78,7 +78,7 @@ export async function getMultiAppTrend(
   monthsBack = 24,
   endYear = LATEST_MONTH.year,
   endMonth = LATEST_MONTH.month,
-): Promise<{ label: string; year: number; month: string; [app: string]: number | string }[]> {
+): Promise<Record<string, number | string>[]> {
   const endIdx = AVAILABLE_MONTHS.findIndex(
     (m) => m.year === endYear && m.month === endMonth,
   );
