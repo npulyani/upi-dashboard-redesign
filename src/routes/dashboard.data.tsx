@@ -278,6 +278,9 @@ function DataPage() {
                       </span>
                     )}
                   </td>
+                  <td className="px-6 py-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                    {r.ticket > 0 ? `₹${formatIndianNumber(r.ticket)}` : "—"}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="w-24 ml-auto text-primary">
                       {r.sparkline.length > 1 ? (
