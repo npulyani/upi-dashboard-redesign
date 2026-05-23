@@ -232,13 +232,16 @@ function DataPage() {
                 <Th onClick={() => toggleSort("mom")} active={sortKey === "mom"} dir={sortDir} align="right">
                   MoM
                 </Th>
+                <Th onClick={() => toggleSort("ticket")} active={sortKey === "ticket"} dir={sortDir} align="right">
+                  Avg ticket
+                </Th>
                 <th className="px-6 py-4 font-medium text-right">12-mo trend</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-foreground/5">
               {loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
+                  <td colSpan={8} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
@@ -248,7 +251,7 @@ function DataPage() {
                   <td className="px-6 py-4 font-mono text-xs text-muted-foreground tabular-nums">
                     {String(r.rank).padStart(2, "0")}
                   </td>
-                  <td className="px-6 py-4 font-medium">{r.app_name}</td>
+                  <td className="px-6 py-4 font-medium"><AppLink app={r.app_name} /></td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums text-sm">
                     {r.volume.toFixed(2)}
                   </td>
