@@ -16,6 +16,7 @@ import {
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
 import {
   getMonthData,
@@ -275,6 +276,7 @@ function TrendsPage() {
             <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
               <span className="flex items-center gap-3">
                 <RankBadge delta={m.delta} />
+                <AppLogo app={m.app} size={22} />
                 <span className="font-medium text-sm"><AppLink app={m.app} /></span>
               </span>
               <span className="font-mono text-xs text-muted-foreground">
@@ -294,6 +296,7 @@ function TrendsPage() {
             <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
               <span className="flex items-center gap-3">
                 <RankBadge delta={m.delta} />
+                <AppLogo app={m.app} size={22} />
                 <span className="font-medium text-sm"><AppLink app={m.app} /></span>
               </span>
               <span className="font-mono text-xs text-muted-foreground">

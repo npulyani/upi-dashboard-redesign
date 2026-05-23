@@ -1,0 +1,81 @@
+import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
+import {
+  getAppDomain,
+  getInitials,
+  getInitialsColors,
+} from "@/lib/upi/logos";
+
+type Props = {
+  app: string;
+  size?: number;
+  className?: string;
+  rounded?: "full" | "md" | "lg";
+};
+
+/**
+ * Renders an app logo by trying:
+ *   1. Clearbit logo (square, hi-res) for the mapped domain
+ *   2. Google s2 favicon for the mapped domain
+ *   3. Initials placeholder tile (deterministic color)
+ */
+export function AppLogo({ app, size = 28, className, rounded = "md" }: Props) {
+  const domain = getAppDomain(app);
+  const sources = useMemo(() => {
+    if (!domain) return [] as string[];
+    return [
+      `https://logo.clearbit.com/${domain}`,
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    ];
+  }, [domain]);
+
+  const [srcIdx, setSrcIdx] = useState(0);
+  const failed = srcIdx >= sources.length;
+
+  const radius =
+    rounded === "full" ? "rounded-full" : rounded === "lg" ? "rounded-xl" : "rounded-md";
+
+  if (failed) {
+    const { bg, fg } = getInitialsColors(app);
+    const initials = getInitials(app);
+    return (
+      <div
+        aria-label={app}
+        role="img"
+        className={cn(
+          radius,
+          "shrink-0 inline-flex items-center justify-center font-mono font-semibold uppercase select-none ring-1 ring-black/5",
+          className,
+        )}
+        style={{
+          width: size,
+          height: size,
+          background: bg,
+          color: fg,
+          fontSize: Math.round(size * 0.38),
+          letterSpacing: "0.02em",
+        }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={sources[srcIdx]}
+      alt={`${app} logo`}
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      onError={() => setSrcIdx((i) => i + 1)}
+      className={cn(
+        radius,
+        "shrink-0 object-contain bg-white ring-1 ring-black/5",
+        className,
+      )}
+      style={{ width: size, height: size }}
+    />
+  );
+}

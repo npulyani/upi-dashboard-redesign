@@ -1,76 +1,59 @@
-# UPI Insights Portal — Iteration 2
+## Goal
 
-Goal: take the current 3-tab dashboard (Overview / Trends / Data) and turn it into a comprehensive insights portal. Scope kept tight (one focused build pass) by picking the single highest-leverage piece from each of the four themes you selected, rather than building everything end-to-end.
+Show a logo next to every UPI app name across the dashboard (Overview, Trends, Data tab, deep-dive page, neighbors list). Fetch a real logo when we know the brand; otherwise render a clean initials-based placeholder that matches the design system.
 
-## What we'll build
+## Approach
 
-### 1. Per-app deep-dive page (`/dashboard/app/$appName`)
-A dedicated route for any UPI app. Linked from every app name in the Data tab and Trends legend.
+Runtime image fetching from arbitrary third parties is fragile (CORS, rate limits, broken URLs across 92+ apps and growing). Instead, use a **two-layer strategy** that is fast, deterministic, and offline-safe:
 
-Contents (bento layout, matching existing design system):
-- Hero: app name, current rank, current volume + value, MoM/YoY/3yr CAGR
-- Full-history line chart (Jan 2021 → latest) with metric toggle
-- All-time peak month + value, all-time low, longest streak at rank #1 (if any)
-- Rank timeline (small chart showing rank over time, lower = better)
-- Market-share trajectory area chart
-- "Movers around this app" — the 2 apps directly above and below in current rank
-- Download CSV of this app's full history
+1. **Curated domain map** (`src/lib/upi/logos.ts`) — hand-mapped `appName → domain` for the ~50 well-known apps (PhonePe, Google Pay, Paytm, all major banks, fintechs). Logos are loaded from Google's favicon service: `https://www.google.com/s2/favicons?domain={domain}&sz=128`. This URL is stable, no API key, supports CORS as a plain `<img>`, and returns a transparent PNG.
+   - Optional secondary source: `https://logo.clearbit.com/{domain}` for higher-res square logos where available (we'll try Clearbit first, fall back to Google favicon on `onerror`).
+2. **Initials placeholder** — if no domain is mapped OR both image sources fail, render an SVG/CSS tile with the app's 1–2 initials. Background color is deterministically derived from a hash of the app name (picked from a small palette of design-system-friendly tones), foreground is `--background` or `--foreground` depending on contrast.
 
-### 2. Rankings & Movers strip (on Trends tab)
-A compact horizontal section above the existing insight cards:
-- Top 3 rank climbers this month (with arrow + delta)
-- Top 3 rank fallers
-- Each is clickable → deep-dive page
+## New component
 
-### 3. Competitive landscape quadrant (new card on Trends tab)
-Scatter plot replacing/complementing the "Trajectory check" card:
-- X axis: market share (current month, log scale)
-- Y axis: YoY growth %
-- Bubble size: transaction value (Cr)
-- Four quadrants labeled: Leaders, Challengers, Niche, Laggards
-- Hover reveals app name + numbers; click → deep-dive
+`src/components/upi/AppLogo.tsx`
+- Props: `app: string`, `size?: number` (default 28), `className?`, `rounded?: "full" | "md"` (default `"md"`)
+- Internally: looks up domain, renders `<img>` with `onError` chain (Clearbit → Google favicon → initials SVG). Uses `useState` to track which source is active. `loading="lazy"`, `decoding="async"`.
+- Initials fallback is a `<div>` with the hashed background color, app initials centered in serif font (matches existing brand type).
 
-Plus one new stat card: **HHI concentration index** for the current month with MoM delta ("Market is more/less concentrated").
+## Curated map (sample, full list in implementation)
 
-### 4. Storytelling layer (on Overview tab)
-Auto-generated narrative paragraph above the existing cards:
-> "In Mar 2026, the top 3 apps controlled 94.2% of transaction volume. PhonePe extended its lead with +3.1% MoM while Navi grew fastest among challengers at +18.4%. Total ecosystem processed 18.3B transactions worth ₹24.7L Cr — up 2.1% from last month."
+```ts
+export const APP_DOMAINS: Record<string, string> = {
+  "PhonePe": "phonepe.com",
+  "Google Pay": "pay.google.com",
+  "Paytm": "paytm.com",
+  "Navi": "navi.com",
+  "super.money": "super.money",
+  "BHIM": "bhimupi.org.in",
+  "CRED": "cred.club",
+  "WhatsApp": "whatsapp.com",
+  "Amazon Pay": "amazon.in",
+  "MobiKwik": "mobikwik.com",
+  "Slice": "sliceit.com",
+  "Groww": "groww.in",
+  "Jupiter Money": "jupiter.money",
+  "Fi Money": "fi.money",
+  // ...all major banks (SBI, HDFC, ICICI, Axis, Kotak, IDFC First, Yes, RBL, Federal, Canara, BoB, PNB, IndusInd, etc.)
+  // ...fintechs (FamPay, KreditBee, Money View, Ind Money, BharatPe, Flipkart, Tata Neu, Bajaj Finserv, Samsung Pay, etc.)
+};
+```
 
-Built from data already loaded — no new fetches. Template-driven, 2–3 sentences, regenerates per selected month.
+Unmapped apps (long-tail, "Others") cleanly fall back to initials — no broken-image icons.
 
-### 5. Data tab upgrades
-- Column sorting (rank, volume, value, MoM %, share)
-- Search box to filter apps by name
-- Each row's app name becomes a link to the deep-dive
-- Inline 12-month sparkline column
-- "Export visible rows to CSV" button
-- New computed column: **Avg ticket size** (value × 1e7 ÷ volume × 1e6 = ₹ per txn)
+## Integration points
 
-## Technical notes
+Replace plain app-name renderings with `<AppLogo app={name} /> <AppLink app={name} />` in:
+- `src/routes/dashboard.index.tsx` — leaders list / top cards
+- `src/routes/dashboard.trends.tsx` — Rankings & Movers strip, quadrant labels
+- `src/routes/dashboard.data.tsx` — first column of the table
+- `src/routes/dashboard.app.$appName.tsx` — hero (large 64px logo next to the app name) and neighbors list
 
-- New files:
-  - `src/routes/dashboard.app.$appName.tsx` — deep-dive route
-  - `src/lib/upi/insights.ts` — pure functions: `computeHHI`, `computeRankChanges`, `computeAvgTicket`, `computeCAGR`, `generateNarrative`, `findPeak`
-  - `src/components/upi/Quadrant.tsx` — scatter chart wrapper (Recharts `ScatterChart`)
-  - `src/components/upi/RankBadge.tsx` — reusable rank delta pill (↑3 / ↓2)
-  - `src/components/upi/AppLink.tsx` — wraps app name as `<Link to="/dashboard/app/$appName">`
-- Edits:
-  - `src/routes/dashboard.trends.tsx` — add Movers strip, Quadrant card, HHI card; remove redundant cells
-  - `src/routes/dashboard.index.tsx` — prepend narrative paragraph
-  - `src/routes/dashboard.data.tsx` — sorting state, search input, sparkline col, avg ticket col, CSV export, AppLink wrap
-- Data: all derived client-side from existing JSON files; no schema changes, no backend.
-- URL state for deep-dive metric toggle uses TanStack Router `validateSearch` so links are shareable.
-- All charts continue using Recharts (already in tree). Quadrant uses `ScatterChart` + `ZAxis` for bubble size.
-- Routes added via file-based routing — `routeTree.gen.ts` regenerates automatically.
+No data-fetching or schema changes; all logos load from `<img>` on the client.
 
-## Out of scope (saved for future iterations)
-- Side-by-side compare page
-- Forecast/projection tab
-- Seasonality heatmap
-- Annotated key events overlay on charts
-- Monthly PDF digest
-- Dark mode, mobile re-layout, loading skeletons
-- Methodology page
-- Anomaly detection (>2σ flags)
+## Out of scope
 
-These are all worthwhile — they're listed so you can pick the next slice after this lands.
+- Self-hosting logos in `public/logos/` (would require manual asset collection for 90+ brands)
+- Background scraping or build-time logo download (not needed; the favicon CDN is reliable)
+- Light/dark logo variants

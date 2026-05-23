@@ -16,6 +16,7 @@ import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle } from "@/components/upi/Controls";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
 import {
   AVAILABLE_MONTHS,
@@ -210,9 +211,12 @@ function AppDeepDive() {
         <BentoCard className="col-span-12 lg:col-span-8 min-h-[300px] flex flex-col justify-between">
           <div>
             <CardLabel>Provider · {stats?.latest.label}</CardLabel>
-            <h1 className="font-serif text-5xl lg:text-7xl mt-3 leading-[0.95]">
-              <em className="italic">{decoded}</em>
-            </h1>
+            <div className="mt-3 flex items-center gap-5">
+              <AppLogo app={decoded} size={72} rounded="lg" />
+              <h1 className="font-serif text-5xl lg:text-7xl leading-[0.95]">
+                <em className="italic">{decoded}</em>
+              </h1>
+            </div>
             <div className="mt-5 flex flex-wrap items-baseline gap-x-8 gap-y-3">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -380,7 +384,8 @@ function AppDeepDive() {
                 <span className="font-mono text-xs text-muted-foreground w-8">
                   #{String(n.rank).padStart(2, "0")}
                 </span>
-                <span className="flex-1 font-medium text-sm">
+                <span className="flex-1 font-medium text-sm inline-flex items-center gap-2.5">
+                  <AppLogo app={n.app} size={22} />
                   <AppLink app={n.app} />
                 </span>
                 <RankBadge delta={n.rank < (stats?.latest.rank ?? 0) ? 1 : -1} />

@@ -12,6 +12,7 @@ import {
 } from "@/lib/upi/queries";
 import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/data")({
@@ -251,7 +252,12 @@ function DataPage() {
                   <td className="px-6 py-4 font-mono text-xs text-muted-foreground tabular-nums">
                     {String(r.rank).padStart(2, "0")}
                   </td>
-                  <td className="px-6 py-4 font-medium"><AppLink app={r.app_name} /></td>
+                  <td className="px-6 py-4 font-medium">
+                    <span className="inline-flex items-center gap-3">
+                      <AppLogo app={r.app_name} size={26} />
+                      <AppLink app={r.app_name} />
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums text-sm">
                     {r.volume.toFixed(2)}
                   </td>
