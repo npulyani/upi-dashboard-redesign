@@ -182,9 +182,7 @@ function OverviewPage() {
             className="col-span-12 md:col-span-6 lg:col-span-3 min-h-[180px] flex flex-col justify-between hover:ring-primary/30 transition-shadow"
           >
             <div className="flex justify-between items-start">
-              <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-mono font-semibold text-sm">
-                {row.app_name.slice(0, 2).toUpperCase()}
-              </div>
+              <AppLogo app={row.app_name} size={40} rounded="lg" />
               <span className="font-mono text-xs text-muted-foreground">#0{i + 1}</span>
             </div>
             <div className="mt-6">
