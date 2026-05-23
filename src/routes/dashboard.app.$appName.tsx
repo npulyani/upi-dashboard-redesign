@@ -32,7 +32,7 @@ import {
   rankMap,
   totalFor,
 } from "@/lib/upi/insights";
-import { AppMonthData, TrendPoint } from "@/lib/upi/types";
+import { TrendPoint } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/app/$appName")({
   head: ({ params }) => ({
@@ -466,6 +466,5 @@ function RecordRow({ label, value, sub }: { label: string; value: string; sub: s
   );
 }
 
-// Avoid unused-import warnings (these are used conditionally above)
+// Avoid unused-import warnings
 void LATEST_MONTH;
-void AppMonthData;
