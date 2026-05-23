@@ -16,6 +16,7 @@ import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle } from "@/components/upi/Controls";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
 import {
   AVAILABLE_MONTHS,
