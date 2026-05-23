@@ -8,9 +8,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  Scatter,
+  ScatterChart,
+  ZAxis,
+  ReferenceLine,
 } from "recharts";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
+import { AppLink } from "@/components/upi/AppLink";
+import { RankBadge } from "@/components/upi/RankBadge";
 import {
   getMonthData,
   getPreviousMonth,
@@ -20,6 +26,12 @@ import {
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import {
+  computeHHI,
+  pickMetric,
+  rankChanges,
+  totalFor,
+} from "@/lib/upi/insights";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/trends")({
