@@ -1,7 +1,10 @@
 import { AppMonthData, Metric } from "./types";
 import { formatIndianNumber, formatNumber } from "./queries";
 
-export function pickMetric(r: AppMonthData, metric: Metric) {
+export function pickMetric(
+  r: { cit_volume_mn: number; cit_value_cr: number },
+  metric: Metric,
+) {
   return metric === "volume" ? r.cit_volume_mn : r.cit_value_cr;
 }
 
