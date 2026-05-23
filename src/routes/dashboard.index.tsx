@@ -4,6 +4,7 @@ import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import {
   getMonthData,
   getPreviousMonth,
