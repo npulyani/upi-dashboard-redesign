@@ -1,51 +1,76 @@
-## Plan — State of UPI redesign
+# UPI Insights Portal — Iteration 2
 
-Build a 3-page TanStack Start dashboard in the chosen **bento + minimalist whitespace + serif headings** direction, powered by the real NPCI dataset (62 monthly JSON files, Jan 2021 – Mar 2026) from your repo.
+Goal: take the current 3-tab dashboard (Overview / Trends / Data) and turn it into a comprehensive insights portal. Scope kept tight (one focused build pass) by picking the single highest-leverage piece from each of the four themes you selected, rather than building everything end-to-end.
 
-### 1. Data + foundations
+## What we'll build
 
-- Copy `data/processed/*.json` (62 files) from your repo into `public/data/` so the client can fetch them directly. No backend needed.
-- Add `src/lib/upi/types.ts` (ports your `UpiApp`, `AppMonthData`, `TableRow`, `MONTHS`).
-- Add `src/lib/upi/queries.ts` with `getMonthData`, `getLatestMonth`, `getAvailableMonths`, `getUniqueApps`, `getPreviousMonth`, `getAppTrend` — fetch JSON from `/data/{year}-{month}.json`, cache results in-memory.
-- Update `src/styles.css`: add `--font-serif` (Instrument Serif via Google Fonts) for headings, keep Inter for body, JetBrains Mono for numbers. Add brand tokens (primary indigo, soft surface, asymmetrical card radii).
+### 1. Per-app deep-dive page (`/dashboard/app/$appName`)
+A dedicated route for any UPI app. Linked from every app name in the Data tab and Trends legend.
 
-### 2. Layout
+Contents (bento layout, matching existing design system):
+- Hero: app name, current rank, current volume + value, MoM/YoY/3yr CAGR
+- Full-history line chart (Jan 2021 → latest) with metric toggle
+- All-time peak month + value, all-time low, longest streak at rank #1 (if any)
+- Rank timeline (small chart showing rank over time, lower = better)
+- Market-share trajectory area chart
+- "Movers around this app" — the 2 apps directly above and below in current rank
+- Download CSV of this app's full history
 
-- `src/routes/dashboard.tsx` — layout route: minimal serif wordmark "State of UPI", pill nav (Overview / Trends / Data), global month scrubber + Volume↔Value toggle in a slim sticky bar. Renders `<Outlet />`.
-- Redirect `/` → `/dashboard` in `src/routes/index.tsx`.
+### 2. Rankings & Movers strip (on Trends tab)
+A compact horizontal section above the existing insight cards:
+- Top 3 rank climbers this month (with arrow + delta)
+- Top 3 rank fallers
+- Each is clickable → deep-dive page
 
-### 3. Pages
+### 3. Competitive landscape quadrant (new card on Trends tab)
+Scatter plot replacing/complementing the "Trajectory check" card:
+- X axis: market share (current month, log scale)
+- Y axis: YoY growth %
+- Bubble size: transaction value (Cr)
+- Four quadrants labeled: Leaders, Challengers, Niche, Laggards
+- Hover reveals app name + numbers; click → deep-dive
 
-**`/dashboard` (Overview)** — asymmetric 12-col bento:
-- Big hero tile (col-span-8): total volume for current month in oversized serif, MoM %, area sparkline of last 12 months.
-- Market leader tile (col-span-4): primary-color card, leader name in serif, share % bar vs runner-up.
-- Top 10 app cards (4-up grid): rank, app name, headline metric, share bar.
-- Mini trend strip: 3 default apps line chart (recharts).
+Plus one new stat card: **HHI concentration index** for the current month with MoM delta ("Market is more/less concentrated").
 
-**`/dashboard/trends`** — bento grid:
-- Insight cards (3-up): MoM movers, fastest grower, biggest decliner — derived from data.
-- Multi-line trend chart with app selector (up to 5).
-- Market-share stacked horizontal bar (replacing donut) + 3-period comparison (now / -6m / -12m).
+### 4. Storytelling layer (on Overview tab)
+Auto-generated narrative paragraph above the existing cards:
+> "In Mar 2026, the top 3 apps controlled 94.2% of transaction volume. PhonePe extended its lead with +3.1% MoM while Navi grew fastest among challengers at +18.4%. Total ecosystem processed 18.3B transactions worth ₹24.7L Cr — up 2.1% from last month."
 
-**`/dashboard/data`** — full table:
-- Sortable columns: rank, app, volume (M), value (₹ Cr), share %, MoM %, 12-month sparkline.
-- Search + Volume/Value toggle. Export CSV.
+Built from data already loaded — no new fetches. Template-driven, 2–3 sentences, regenerates per selected month.
 
-### 4. Components (`src/components/upi/`)
-`MonthScrubber`, `MetricToggle`, `BentoCard`, `Sparkline`, `RankCard`, `MarketLeaderCard`, `TrendChart`, `MarketShareBar`, `DataTable`, `InsightCard`.
+### 5. Data tab upgrades
+- Column sorting (rank, volume, value, MoM %, share)
+- Search box to filter apps by name
+- Each row's app name becomes a link to the deep-dive
+- Inline 12-month sparkline column
+- "Export visible rows to CSV" button
+- New computed column: **Avg ticket size** (value × 1e7 ÷ volume × 1e6 = ₹ per txn)
 
-Charts: `recharts` (already in shadcn). Add `react-window` only if table perf needs it (skip initially).
+## Technical notes
 
-### Design specifics carried verbatim from the picked direction
-- Card radius `rounded-[24px]` / `rounded-[32px]`; ring `ring-1 ring-black/5`; surface `bg-white` on `bg-background` (`hsl(210 20% 98%)`).
-- Primary `hsl(217 91% 60%)` for accent surfaces (leader tile, ticks, callouts).
-- Numbers in JetBrains Mono; headings in Instrument Serif (the direction's Inter Extrabold gets swapped per your "serif headings" instruction); body in Inter.
-- Subtle slide-up + numberReveal animations on mount.
-- Asymmetric grid (8/4, 12, 4×3) — never a uniform 3-col wall.
+- New files:
+  - `src/routes/dashboard.app.$appName.tsx` — deep-dive route
+  - `src/lib/upi/insights.ts` — pure functions: `computeHHI`, `computeRankChanges`, `computeAvgTicket`, `computeCAGR`, `generateNarrative`, `findPeak`
+  - `src/components/upi/Quadrant.tsx` — scatter chart wrapper (Recharts `ScatterChart`)
+  - `src/components/upi/RankBadge.tsx` — reusable rank delta pill (↑3 / ↓2)
+  - `src/components/upi/AppLink.tsx` — wraps app name as `<Link to="/dashboard/app/$appName">`
+- Edits:
+  - `src/routes/dashboard.trends.tsx` — add Movers strip, Quadrant card, HHI card; remove redundant cells
+  - `src/routes/dashboard.index.tsx` — prepend narrative paragraph
+  - `src/routes/dashboard.data.tsx` — sorting state, search input, sparkline col, avg ticket col, CSV export, AppLink wrap
+- Data: all derived client-side from existing JSON files; no schema changes, no backend.
+- URL state for deep-dive metric toggle uses TanStack Router `validateSearch` so links are shareable.
+- All charts continue using Recharts (already in tree). Quadrant uses `ScatterChart` + `ZAxis` for bubble size.
+- Routes added via file-based routing — `routeTree.gen.ts` regenerates automatically.
 
-### Out of scope (this pass)
-- Auth, persistence, user prefs — none needed; data is static JSON.
-- Mobile polish beyond responsive collapse to single column.
-- Dark mode.
+## Out of scope (saved for future iterations)
+- Side-by-side compare page
+- Forecast/projection tab
+- Seasonality heatmap
+- Annotated key events overlay on charts
+- Monthly PDF digest
+- Dark mode, mobile re-layout, loading skeletons
+- Methodology page
+- Anomaly detection (>2σ flags)
 
-Ready to switch to build mode and ship.
+These are all worthwhile — they're listed so you can pick the next slice after this lands.

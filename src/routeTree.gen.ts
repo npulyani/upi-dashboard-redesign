@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
+import { Route as DashboardAppAppNameRouteImport } from './routes/dashboard.app.$appName'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -40,6 +41,11 @@ const DashboardDataRoute = DashboardDataRouteImport.update({
   path: '/data',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
+  id: '/app/$appName',
+  path: '/app/$appName',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,12 +53,14 @@ export interface FileRoutesByFullPath {
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -70,8 +79,14 @@ export interface FileRouteTypes {
     | '/dashboard/data'
     | '/dashboard/trends'
     | '/dashboard/'
+    | '/dashboard/app/$appName'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard/data' | '/dashboard/trends' | '/dashboard'
+  to:
+    | '/'
+    | '/dashboard/data'
+    | '/dashboard/trends'
+    | '/dashboard'
+    | '/dashboard/app/$appName'
   id:
     | '__root__'
     | '/'
@@ -79,6 +94,7 @@ export interface FileRouteTypes {
     | '/dashboard/data'
     | '/dashboard/trends'
     | '/dashboard/'
+    | '/dashboard/app/$appName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -123,6 +139,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDataRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/app/$appName': {
+      id: '/dashboard/app/$appName'
+      path: '/app/$appName'
+      fullPath: '/dashboard/app/$appName'
+      preLoaderRoute: typeof DashboardAppAppNameRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
@@ -130,12 +153,14 @@ interface DashboardRouteChildren {
   DashboardDataRoute: typeof DashboardDataRoute
   DashboardTrendsRoute: typeof DashboardTrendsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardAppAppNameRoute: typeof DashboardAppAppNameRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDataRoute: DashboardDataRoute,
   DashboardTrendsRoute: DashboardTrendsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardAppAppNameRoute: DashboardAppAppNameRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
@@ -149,13 +174,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -8,9 +8,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  Scatter,
+  ScatterChart,
+  ZAxis,
+  ReferenceLine,
 } from "recharts";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
+import { AppLink } from "@/components/upi/AppLink";
+import { RankBadge } from "@/components/upi/RankBadge";
 import {
   getMonthData,
   getPreviousMonth,
@@ -20,6 +26,12 @@ import {
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import {
+  computeHHI,
+  pickMetric,
+  rankChanges,
+  totalFor,
+} from "@/lib/upi/insights";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/trends")({
@@ -175,32 +187,123 @@ function TrendsPage() {
   const top6Share = sortedByShare.slice(0, 6);
   const otherShare = sortedByShare.slice(6).reduce((a, b) => a + b.share, 0);
 
+  // Rank movers
+  const movers = useMemo(() => {
+    if (!current.length || !prev.length) return { climbers: [], fallers: [] };
+    const ch = rankChanges(current, prev, metric).filter((c) => c.delta !== 0);
+    const climbers = [...ch].sort((a, b) => b.delta - a.delta).slice(0, 3);
+    const fallers = [...ch].sort((a, b) => a.delta - b.delta).slice(0, 3);
+    return { climbers, fallers };
+  }, [current, prev, metric]);
+
+  // HHI concentration
+  const hhi = useMemo(() => {
+    if (!current.length) return null;
+    const now = computeHHI(current, metric);
+    const before = prev.length ? computeHHI(prev, metric) : null;
+    return { now, delta: before !== null ? now - before : null };
+  }, [current, prev, metric]);
+
+  // Quadrant scatter — share vs YoY growth, bubble = value
+  const quadrant = useMemo(() => {
+    if (!current.length || !twelveAgo.length) return [];
+    const total = totalFor(current, metric);
+    const prevMap = new Map(twelveAgo.map((r) => [r.app_name, r]));
+    return current
+      .map((r) => {
+        const cur = pickMetric(r, metric);
+        const past = prevMap.get(r.app_name);
+        const pastV = past ? pickMetric(past, metric) : 0;
+        if (cur <= 0 || pastV <= 0) return null;
+        const share = total ? (cur / total) * 100 : 0;
+        const yoy = ((cur - pastV) / pastV) * 100;
+        return {
+          app: r.app_name,
+          share,
+          yoy,
+          value: r.cit_value_cr,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null && x.share > 0.05);
+  }, [current, twelveAgo, metric]);
+
+  const quadrantMedianShare = useMemo(() => {
+    if (!quadrant.length) return 0;
+    const sorted = [...quadrant].map((q) => q.share).sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }, [quadrant]);
+
   return (
     <div className="grid grid-cols-12 gap-5">
       {/* Insight cards */}
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]">
-        <CardLabel>Ecosystem</CardLabel>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]">
+        <CardLabel>Ecosystem MoM</CardLabel>
         <p className="mt-3 font-serif text-5xl">
           {insights ? `${insights.ecosystem >= 0 ? "+" : ""}${insights.ecosystem.toFixed(1)}%` : "—"}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Aggregate {metric === "volume" ? "volume" : "value"} change vs previous month.
+          Aggregate {metric === "volume" ? "volume" : "value"} vs previous month.
         </p>
       </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]" delay={80}>
-        <CardLabel>Fastest grower</CardLabel>
-        <p className="mt-3 font-serif text-3xl">{insights?.gainer?.name ?? "—"}</p>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={80}>
+        <CardLabel>Market concentration · HHI</CardLabel>
+        <p className="mt-3 font-serif text-5xl">{hhi ? Math.round(hhi.now) : "—"}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {hhi?.delta !== null && hhi?.delta !== undefined
+            ? `${hhi.delta >= 0 ? "More" : "Less"} concentrated than last month (${hhi.delta >= 0 ? "+" : ""}${hhi.delta.toFixed(0)})`
+            : "Sum of squared market shares."}
+        </p>
+      </BentoCard>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={160}>
+        <CardLabel>Fastest MoM grower</CardLabel>
+        <p className="mt-3 font-serif text-3xl">
+          {insights?.gainer ? <AppLink app={insights.gainer.name} /> : "—"}
+        </p>
         <p className="mt-2 font-mono text-sm text-emerald-600">
           {insights ? `+${insights.gainer.pct.toFixed(1)}% MoM` : ""}
         </p>
       </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]" delay={160}>
-        <CardLabel>Biggest decliner</CardLabel>
-        <p className="mt-3 font-serif text-3xl">{insights?.decliner?.name ?? "—"}</p>
-        <p className="mt-2 font-mono text-sm text-rose-600">
-          {insights ? `${insights.decliner.pct.toFixed(1)}% MoM` : ""}
-        </p>
+
+      {/* Rank movers strip */}
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={180}>
+        <CardLabel>Rank climbers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.climbers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.climbers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
       </BentoCard>
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={220}>
+        <CardLabel>Rank fallers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.fallers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.fallers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </BentoCard>
+
 
       {/* App selector */}
       <BentoCard className="col-span-12" delay={220}>
@@ -313,7 +416,89 @@ function TrendsPage() {
         </div>
       </BentoCard>
 
+      {/* Competitive quadrant */}
+      <BentoCard className="col-span-12 min-h-[440px]" delay={310}>
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <CardLabel>Competitive landscape · YoY growth vs market share</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">Quadrant view</h3>
+          </div>
+          <div className="hidden md:flex gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            <span>↗ Leaders</span>
+            <span>↖ Challengers</span>
+            <span>↙ Niche</span>
+            <span>↘ Laggards</span>
+          </div>
+        </div>
+        <div className="h-[360px] w-full text-primary">
+          <ResponsiveContainer>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 30, left: 10 }}>
+              <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
+              <XAxis
+                dataKey="share"
+                type="number"
+                name="Market share"
+                scale="log"
+                domain={["auto", "auto"]}
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${(v as number).toFixed(v < 1 ? 1 : 0)}%`}
+                label={{ value: "Market share (log)", position: "insideBottom", offset: -10, style: { fontSize: 10, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" } }}
+              />
+              <YAxis
+                dataKey="yoy"
+                type="number"
+                name="YoY growth"
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v >= 0 ? "+" : ""}${(v as number).toFixed(0)}%`}
+                width={50}
+              />
+              <ZAxis dataKey="value" range={[60, 800]} name="Value" />
+              <ReferenceLine y={0} stroke="var(--color-border)" />
+              <ReferenceLine x={quadrantMedianShare} stroke="var(--color-border)" strokeDasharray="4 4" />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-card)",
+                  fontSize: 12,
+                }}
+                formatter={(v: number, name: string) => {
+                  if (name === "Market share") return [`${(v as number).toFixed(2)}%`, name];
+                  if (name === "YoY growth") return [`${v >= 0 ? "+" : ""}${(v as number).toFixed(1)}%`, name];
+                  if (name === "Value") return [`₹${formatIndianNumber(v as number)} Cr`, name];
+                  return [v, name];
+                }}
+                labelFormatter={() => ""}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const p = payload[0].payload as { app: string; share: number; yoy: number; value: number };
+                  return (
+                    <div className="rounded-xl border border-border bg-card p-3 text-xs shadow-md">
+                      <p className="font-serif text-base mb-1">{p.app}</p>
+                      <p className="font-mono text-muted-foreground">Share: {p.share.toFixed(2)}%</p>
+                      <p className={`font-mono ${p.yoy >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        YoY: {p.yoy >= 0 ? "+" : ""}{p.yoy.toFixed(1)}%
+                      </p>
+                      <p className="font-mono text-muted-foreground">Value: ₹{formatIndianNumber(p.value)} Cr</p>
+                    </div>
+                  );
+                }}
+              />
+              <Scatter data={quadrant} fill="currentColor" fillOpacity={0.55} stroke="currentColor" strokeWidth={1} />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      </BentoCard>
+
       {/* Market share stacked bar */}
+
       <BentoCard className="col-span-12 lg:col-span-7 min-h-[260px]" delay={340}>
         <CardLabel>Market share · {month} {year}</CardLabel>
         <h3 className="font-serif text-2xl mt-1 mb-6">Who owns the ecosystem</h3>

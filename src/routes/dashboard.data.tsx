@@ -10,6 +10,8 @@ import {
   getAppTrend,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import { avgTicket } from "@/lib/upi/insights";
+import { AppLink } from "@/components/upi/AppLink";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/data")({
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/dashboard/data")({
   component: DataPage,
 });
 
-type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name";
+type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket";
 type Row = {
   rank: number;
   app_name: string;
@@ -30,6 +32,7 @@ type Row = {
   value: number;
   share: number;
   mom: number | null;
+  ticket: number;
   sparkline: number[];
 };
 
@@ -97,6 +100,7 @@ function DataPage() {
         value: r.cit_value_cr,
         share: total ? (cur / total) * 100 : 0,
         mom: past ? ((cur - past) / past) * 100 : null,
+        ticket: avgTicket(r),
         sparkline: sparks[r.app_name] ?? [],
       };
     });
@@ -134,6 +138,10 @@ function DataPage() {
           av = a.mom ?? -Infinity;
           bv = b.mom ?? -Infinity;
           break;
+        case "ticket":
+          av = a.ticket;
+          bv = b.ticket;
+          break;
       }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
@@ -151,7 +159,7 @@ function DataPage() {
   }
 
   function exportCsv() {
-    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %"];
+    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)"];
     const lines = [header.join(",")];
     filtered.forEach((r) => {
       lines.push(
@@ -162,6 +170,7 @@ function DataPage() {
           r.value.toFixed(2),
           r.share.toFixed(3),
           r.mom === null ? "" : r.mom.toFixed(3),
+          r.ticket.toFixed(2),
         ].join(","),
       );
     });
@@ -223,13 +232,16 @@ function DataPage() {
                 <Th onClick={() => toggleSort("mom")} active={sortKey === "mom"} dir={sortDir} align="right">
                   MoM
                 </Th>
+                <Th onClick={() => toggleSort("ticket")} active={sortKey === "ticket"} dir={sortDir} align="right">
+                  Avg ticket
+                </Th>
                 <th className="px-6 py-4 font-medium text-right">12-mo trend</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-foreground/5">
               {loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
+                  <td colSpan={8} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
@@ -239,7 +251,7 @@ function DataPage() {
                   <td className="px-6 py-4 font-mono text-xs text-muted-foreground tabular-nums">
                     {String(r.rank).padStart(2, "0")}
                   </td>
-                  <td className="px-6 py-4 font-medium">{r.app_name}</td>
+                  <td className="px-6 py-4 font-medium"><AppLink app={r.app_name} /></td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums text-sm">
                     {r.volume.toFixed(2)}
                   </td>
@@ -265,6 +277,9 @@ function DataPage() {
                         {r.mom >= 0 ? "▲" : "▼"} {Math.abs(r.mom).toFixed(2)}%
                       </span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                    {r.ticket > 0 ? `₹${formatIndianNumber(r.ticket)}` : "—"}
                   </td>
                   <td className="px-6 py-4">
                     <div className="w-24 ml-auto text-primary">
