@@ -224,7 +224,10 @@ function OverviewPage() {
                 <span className="font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="font-medium text-sm truncate"><AppLink app={row.app_name} /></span>
+                <span className="font-medium text-sm truncate inline-flex items-center gap-2.5">
+                  <AppLogo app={row.app_name} size={22} />
+                  <AppLink app={row.app_name} />
+                </span>
                 <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary/80"
