@@ -384,7 +384,8 @@ function AppDeepDive() {
                 <span className="font-mono text-xs text-muted-foreground w-8">
                   #{String(n.rank).padStart(2, "0")}
                 </span>
-                <span className="flex-1 font-medium text-sm">
+                <span className="flex-1 font-medium text-sm inline-flex items-center gap-2.5">
+                  <AppLogo app={n.app} size={22} />
                   <AppLink app={n.app} />
                 </span>
                 <RankBadge delta={n.rank < (stats?.latest.rank ?? 0) ? 1 : -1} />
