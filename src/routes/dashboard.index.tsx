@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
+import { AppLink } from "@/components/upi/AppLink";
 import {
   getMonthData,
   getPreviousMonth,
@@ -10,6 +11,7 @@ import {
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import { generateNarrative } from "@/lib/upi/insights";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
