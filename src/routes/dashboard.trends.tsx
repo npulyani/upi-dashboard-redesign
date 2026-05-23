@@ -416,7 +416,89 @@ function TrendsPage() {
         </div>
       </BentoCard>
 
+      {/* Competitive quadrant */}
+      <BentoCard className="col-span-12 min-h-[440px]" delay={310}>
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <CardLabel>Competitive landscape · YoY growth vs market share</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">Quadrant view</h3>
+          </div>
+          <div className="hidden md:flex gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            <span>↗ Leaders</span>
+            <span>↖ Challengers</span>
+            <span>↙ Niche</span>
+            <span>↘ Laggards</span>
+          </div>
+        </div>
+        <div className="h-[360px] w-full text-primary">
+          <ResponsiveContainer>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 30, left: 10 }}>
+              <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
+              <XAxis
+                dataKey="share"
+                type="number"
+                name="Market share"
+                scale="log"
+                domain={["auto", "auto"]}
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${(v as number).toFixed(v < 1 ? 1 : 0)}%`}
+                label={{ value: "Market share (log)", position: "insideBottom", offset: -10, style: { fontSize: 10, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" } }}
+              />
+              <YAxis
+                dataKey="yoy"
+                type="number"
+                name="YoY growth"
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v >= 0 ? "+" : ""}${(v as number).toFixed(0)}%`}
+                width={50}
+              />
+              <ZAxis dataKey="value" range={[60, 800]} name="Value" />
+              <ReferenceLine y={0} stroke="var(--color-border)" />
+              <ReferenceLine x={quadrantMedianShare} stroke="var(--color-border)" strokeDasharray="4 4" />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: "1px solid var(--color-border)",
+                  background: "var(--color-card)",
+                  fontSize: 12,
+                }}
+                formatter={(v: number, name: string) => {
+                  if (name === "Market share") return [`${(v as number).toFixed(2)}%`, name];
+                  if (name === "YoY growth") return [`${v >= 0 ? "+" : ""}${(v as number).toFixed(1)}%`, name];
+                  if (name === "Value") return [`₹${formatIndianNumber(v as number)} Cr`, name];
+                  return [v, name];
+                }}
+                labelFormatter={() => ""}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const p = payload[0].payload as { app: string; share: number; yoy: number; value: number };
+                  return (
+                    <div className="rounded-xl border border-border bg-card p-3 text-xs shadow-md">
+                      <p className="font-serif text-base mb-1">{p.app}</p>
+                      <p className="font-mono text-muted-foreground">Share: {p.share.toFixed(2)}%</p>
+                      <p className={`font-mono ${p.yoy >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        YoY: {p.yoy >= 0 ? "+" : ""}{p.yoy.toFixed(1)}%
+                      </p>
+                      <p className="font-mono text-muted-foreground">Value: ₹{formatIndianNumber(p.value)} Cr</p>
+                    </div>
+                  );
+                }}
+              />
+              <Scatter data={quadrant} fill="currentColor" fillOpacity={0.55} stroke="currentColor" strokeWidth={1} />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      </BentoCard>
+
       {/* Market share stacked bar */}
+
       <BentoCard className="col-span-12 lg:col-span-7 min-h-[260px]" delay={340}>
         <CardLabel>Market share · {month} {year}</CardLabel>
         <h3 className="font-serif text-2xl mt-1 mb-6">Who owns the ecosystem</h3>
