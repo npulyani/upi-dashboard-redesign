@@ -105,20 +105,30 @@ function OverviewPage() {
 
   const narrative = generateNarrative(month, year, current, previous, metric);
 
+  const top2Share =
+    (((sorted[0]?.cit_volume_mn ?? 0) + (sorted[1]?.cit_volume_mn ?? 0)) /
+      (current.reduce((a, b) => a + b.cit_volume_mn, 0) || 1)) *
+    100;
+
   return (
     <div className="grid grid-cols-12 gap-5">
-      {/* Narrative */}
+      {/* Narrative + key stats */}
       {narrative && (
         <BentoCard className="col-span-12" tone="dark">
           <CardLabel className="text-background/60">This month in UPI</CardLabel>
           <p className="font-serif text-xl lg:text-2xl mt-2 leading-snug text-background">
             {narrative}
           </p>
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            <Stat label="Apps" value={String(current.length)} />
+            <Stat label="Top 2 share" value={`${top2Share.toFixed(0)}%`} />
+            <Stat label="MoM" value={`${mom >= 0 ? "+" : ""}${mom.toFixed(1)}%`} />
+          </div>
         </BentoCard>
       )}
 
       {/* Hero */}
-      <BentoCard className="col-span-12 lg:col-span-8 min-h-[340px] flex flex-col justify-between">
+      <BentoCard className="col-span-12 min-h-[280px] flex flex-col justify-between">
         <div className="flex justify-between items-start gap-4">
           <div>
             <CardLabel>Total {metricLabel} — {month} {year}</CardLabel>
@@ -136,37 +146,11 @@ function OverviewPage() {
           </div>
         </div>
         <div className="mt-8">
-          <CardLabel>Leader trajectory · last 12 months</CardLabel>
+          <CardLabel>
+            Leader trajectory · {leader?.app_name ?? "—"} · last 12 months
+          </CardLabel>
           <div className="mt-2 text-primary">
             <Sparkline values={leaderTrend} height={72} />
-          </div>
-        </div>
-      </BentoCard>
-
-      {/* Market Leader */}
-      <BentoCard
-        tone="primary"
-        delay={80}
-        className="col-span-12 lg:col-span-4 min-h-[340px] flex flex-col justify-between"
-      >
-        <div>
-          <span className="inline-flex px-3 py-1 rounded-full bg-white/15 font-mono text-[10px] uppercase tracking-widest">
-            Dominance
-          </span>
-          <h3 className="mt-5 font-serif text-3xl lg:text-4xl leading-tight">
-            <em className="italic">
-              {leader ? <AppLink app={leader.app_name} className="hover:underline underline-offset-4">{leader.app_name}</AppLink> : "—"}
-            </em>{" "}
-            leads with {leaderShare.toFixed(1)}% share.
-          </h3>
-        </div>
-        <div className="pt-6 border-t border-white/15">
-          <p className="text-white/70 text-sm mb-4">
-            Runner-up: {runnerUp ? <AppLink app={runnerUp.app_name} className="hover:underline underline-offset-4 text-white">{runnerUp.app_name}</AppLink> : "—"} ({runnerShare.toFixed(1)}%)
-          </p>
-          <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden flex">
-            <div className="h-full bg-white" style={{ width: `${leaderShare}%` }} />
-            <div className="h-full bg-white/40" style={{ width: `${runnerShare}%` }} />
           </div>
         </div>
       </BentoCard>
@@ -204,7 +188,7 @@ function OverviewPage() {
       })}
 
       {/* Top 10 ranked list */}
-      <BentoCard className="col-span-12 lg:col-span-7" delay={420}>
+      <BentoCard className="col-span-12" delay={420}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <CardLabel>Top 10 · {metric === "volume" ? "by volume" : "by value"}</CardLabel>
@@ -244,31 +228,6 @@ function OverviewPage() {
           })}
         </ol>
       </BentoCard>
-
-      {/* Coverage Card */}
-      <BentoCard tone="dark" className="col-span-12 lg:col-span-5" delay={480}>
-        <CardLabel className="text-background/60">Ecosystem</CardLabel>
-        <h3 className="font-serif text-3xl lg:text-4xl mt-3 leading-tight">
-          {current.length} apps processed{" "}
-          <em className="italic text-primary-foreground/80">{totalDisplay}</em> in {month} {year}.
-        </h3>
-        <p className="mt-6 text-background/60 text-sm leading-relaxed">
-          PhonePe + Google Pay continue to anchor more than four-fifths of all UPI consumer
-          transactions, while a long tail of fintech challengers — Navi, super.money, Cred —
-          fight for the remaining share.
-        </p>
-        <div className="mt-8 grid grid-cols-3 gap-4">
-          <Stat label="Apps" value={String(current.length)} />
-          <Stat
-            label="Top 2 share"
-            value={`${(((sorted[0]?.cit_volume_mn ?? 0) + (sorted[1]?.cit_volume_mn ?? 0)) / (current.reduce((a, b) => a + b.cit_volume_mn, 0) || 1) * 100).toFixed(0)}%`}
-          />
-          <Stat
-            label="MoM"
-            value={`${mom >= 0 ? "+" : ""}${mom.toFixed(1)}%`}
-          />
-        </div>
-      </BentoCard>
     </div>
   );
 }
@@ -277,7 +236,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="font-mono text-[9px] uppercase tracking-widest text-background/50">{label}</p>
-      <p className="font-serif text-2xl mt-1">{value}</p>
+      <p className="font-serif text-2xl mt-1 text-background">{value}</p>
     </div>
   );
 }

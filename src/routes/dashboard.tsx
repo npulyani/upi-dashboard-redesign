@@ -120,12 +120,27 @@ function Shell() {
       </main>
 
       <footer className="border-t border-foreground/5 mt-16">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Data: NPCI monthly reports · Jan 2021 — Mar 2026
-          </p>
-          <p className="font-serif italic text-sm text-muted-foreground">
-            State of UPI — an editorial dashboard
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Data: NPCI monthly reports · Jan 2021 — Mar 2026
+            </p>
+            <p className="font-serif italic text-sm text-muted-foreground">
+              State of UPI — an editorial dashboard
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground/80 leading-relaxed border-t border-foreground/5 pt-4">
+            Disclaimer: This website is an independent, non-commercial project built using
+            publicly available data published on the{" "}
+            <a
+              href="https://www.npci.org.in/what-we-do/upi/upi-ecosystem-statistics"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              NPCI website
+            </a>
+            . It is not affiliated with or endorsed by NPCI or any of the UPI apps listed.
           </p>
         </div>
       </footer>
