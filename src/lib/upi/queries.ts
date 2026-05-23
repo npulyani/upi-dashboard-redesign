@@ -1,3 +1,4 @@
+import { supabase } from "../supabase";
 import { AppMonthData, MONTH_TO_NUM, NUM_TO_MONTH, TrendPoint } from "./types";
 
 // Generate available months: Jan 2021 → Mar 2026 (matches dataset)
@@ -20,16 +21,34 @@ const cache = new Map<string, AppMonthData[]>();
 export async function getMonthData(year: number, month: string): Promise<AppMonthData[]> {
   const key = `${year}-${month}`;
   if (cache.has(key)) return cache.get(key)!;
-  try {
-    const res = await fetch(`/data/${year}-${month}.json`);
-    if (!res.ok) return [];
-    const raw = (await res.json()) as AppMonthData[];
-    const data = raw.filter((r) => r.app_name && r.cit_volume_mn > 0);
-    cache.set(key, data);
-    return data;
-  } catch {
-    return [];
-  }
+
+  const { data, error } = await supabase
+    .from("upi_monthly_data")
+    .select("app_name_raw, year, month, month_num, cit_volume_mn, cit_value_cr, upi_apps(canonical_name, logo_domain)")
+    .eq("year", year)
+    .eq("month", month)
+    .gt("cit_volume_mn", 0);
+
+  if (error || !data) return [];
+
+  const rows: AppMonthData[] = data
+    .filter((r) => r.app_name_raw)
+    .map((r) => {
+      const appInfo = r.upi_apps as unknown as { canonical_name: string; logo_domain?: string | null } | null;
+      return {
+        app_name: appInfo?.canonical_name ?? r.app_name_raw,
+        app_name_raw: r.app_name_raw,
+        year: r.year,
+        month: r.month,
+        month_num: r.month_num,
+        cit_volume_mn: r.cit_volume_mn,
+        cit_value_cr: r.cit_value_cr,
+        logo_domain: appInfo?.logo_domain ?? null,
+      };
+    });
+
+  cache.set(key, rows);
+  return rows;
 }
 
 export function getPreviousMonth(year: number, month: string) {

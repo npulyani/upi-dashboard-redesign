@@ -166,7 +166,7 @@ function OverviewPage() {
             className="col-span-12 md:col-span-6 lg:col-span-3 min-h-[180px] flex flex-col justify-between hover:ring-primary/30 transition-shadow"
           >
             <div className="flex justify-between items-start">
-              <AppLogo app={row.app_name} size={40} rounded="lg" />
+              <AppLogo app={row.app_name} domain={row.logo_domain} size={40} rounded="lg" />
               <span className="font-mono text-xs text-muted-foreground">#0{i + 1}</span>
             </div>
             <div className="mt-6">
@@ -209,7 +209,7 @@ function OverviewPage() {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="font-medium text-sm truncate inline-flex items-center gap-2.5">
-                  <AppLogo app={row.app_name} size={22} />
+                  <AppLogo app={row.app_name} domain={row.logo_domain} size={22} />
                   <AppLink app={row.app_name} />
                 </span>
                 <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">

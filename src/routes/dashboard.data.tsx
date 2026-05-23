@@ -81,6 +81,11 @@ function DataPage() {
     };
   }, [year, month, metric]);
 
+  const logoMap = useMemo(
+    () => new Map(current.map((r) => [r.app_name, r.logo_domain ?? null])),
+    [current],
+  );
+
   const rows: Row[] = useMemo(() => {
     const prevMap = new Map(prev.map((r) => [r.app_name, r]));
     const total = current.reduce(
@@ -254,7 +259,7 @@ function DataPage() {
                   </td>
                   <td className="px-6 py-4 font-medium">
                     <span className="inline-flex items-center gap-3">
-                      <AppLogo app={r.app_name} size={26} />
+                      <AppLogo app={r.app_name} domain={logoMap.get(r.app_name)} size={26} />
                       <AppLink app={r.app_name} />
                     </span>
                   </td>

@@ -6,6 +6,8 @@ export interface AppMonthData {
   month_num: number;
   cit_volume_mn: number;
   cit_value_cr: number;
+  /** Domain used for logo resolution (from upi_apps.logo_domain). Null for unmapped apps. */
+  logo_domain?: string | null;
 }
 
 export interface TableRow extends AppMonthData {

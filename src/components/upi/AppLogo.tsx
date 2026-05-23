@@ -8,6 +8,8 @@ import {
 
 type Props = {
   app: string;
+  /** Logo domain from DB (upi_apps.logo_domain). Falls back to the logos.ts map, then initials. */
+  domain?: string | null;
   size?: number;
   className?: string;
   rounded?: "full" | "md" | "lg";
@@ -15,12 +17,14 @@ type Props = {
 
 /**
  * Renders an app logo by trying:
- *   1. Clearbit logo (square, hi-res) for the mapped domain
- *   2. Google s2 favicon for the mapped domain
+ *   1. Clearbit logo (square, hi-res) for the resolved domain
+ *   2. Google s2 favicon for the resolved domain
  *   3. Initials placeholder tile (deterministic color)
+ *
+ * Domain resolution order: `domain` prop (from DB) → logos.ts map → no logo.
  */
-export function AppLogo({ app, size = 28, className, rounded = "md" }: Props) {
-  const domain = getAppDomain(app);
+export function AppLogo({ app, domain: domainProp, size = 28, className, rounded = "md" }: Props) {
+  const domain = domainProp ?? getAppDomain(app);
   const sources = useMemo(() => {
     if (!domain) return [] as string[];
     return [

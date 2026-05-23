@@ -168,6 +168,11 @@ function TrendsPage() {
     };
   }, [current, sixAgo, twelveAgo, metric]);
 
+  const logoMap = useMemo(
+    () => new Map(current.map((r) => [r.app_name, r.logo_domain ?? null])),
+    [current],
+  );
+
   const shareForSelected = useMemo(() => {
     const get = (rows: { app: string; share: number }[], app: string) =>
       rows.find((r) => r.app === app)?.share ?? 0;
@@ -276,7 +281,7 @@ function TrendsPage() {
             <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
               <span className="flex items-center gap-3">
                 <RankBadge delta={m.delta} />
-                <AppLogo app={m.app} size={22} />
+                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
                 <span className="font-medium text-sm"><AppLink app={m.app} /></span>
               </span>
               <span className="font-mono text-xs text-muted-foreground">
@@ -296,7 +301,7 @@ function TrendsPage() {
             <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
               <span className="flex items-center gap-3">
                 <RankBadge delta={m.delta} />
-                <AppLogo app={m.app} size={22} />
+                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
                 <span className="font-medium text-sm"><AppLink app={m.app} /></span>
               </span>
               <span className="font-mono text-xs text-muted-foreground">
