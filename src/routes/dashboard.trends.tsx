@@ -236,29 +236,74 @@ function TrendsPage() {
   return (
     <div className="grid grid-cols-12 gap-5">
       {/* Insight cards */}
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]">
-        <CardLabel>Ecosystem</CardLabel>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]">
+        <CardLabel>Ecosystem MoM</CardLabel>
         <p className="mt-3 font-serif text-5xl">
           {insights ? `${insights.ecosystem >= 0 ? "+" : ""}${insights.ecosystem.toFixed(1)}%` : "—"}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Aggregate {metric === "volume" ? "volume" : "value"} change vs previous month.
+          Aggregate {metric === "volume" ? "volume" : "value"} vs previous month.
         </p>
       </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]" delay={80}>
-        <CardLabel>Fastest grower</CardLabel>
-        <p className="mt-3 font-serif text-3xl">{insights?.gainer?.name ?? "—"}</p>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={80}>
+        <CardLabel>Market concentration · HHI</CardLabel>
+        <p className="mt-3 font-serif text-5xl">{hhi ? Math.round(hhi.now) : "—"}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {hhi?.delta !== null && hhi?.delta !== undefined
+            ? `${hhi.delta >= 0 ? "More" : "Less"} concentrated than last month (${hhi.delta >= 0 ? "+" : ""}${hhi.delta.toFixed(0)})`
+            : "Sum of squared market shares."}
+        </p>
+      </BentoCard>
+      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={160}>
+        <CardLabel>Fastest MoM grower</CardLabel>
+        <p className="mt-3 font-serif text-3xl">
+          {insights?.gainer ? <AppLink app={insights.gainer.name} /> : "—"}
+        </p>
         <p className="mt-2 font-mono text-sm text-emerald-600">
           {insights ? `+${insights.gainer.pct.toFixed(1)}% MoM` : ""}
         </p>
       </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[180px]" delay={160}>
-        <CardLabel>Biggest decliner</CardLabel>
-        <p className="mt-3 font-serif text-3xl">{insights?.decliner?.name ?? "—"}</p>
-        <p className="mt-2 font-mono text-sm text-rose-600">
-          {insights ? `${insights.decliner.pct.toFixed(1)}% MoM` : ""}
-        </p>
+
+      {/* Rank movers strip */}
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={180}>
+        <CardLabel>Rank climbers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.climbers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.climbers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
       </BentoCard>
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={220}>
+        <CardLabel>Rank fallers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.fallers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.fallers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </BentoCard>
+
 
       {/* App selector */}
       <BentoCard className="col-span-12" delay={220}>
