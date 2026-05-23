@@ -187,6 +187,52 @@ function TrendsPage() {
   const top6Share = sortedByShare.slice(0, 6);
   const otherShare = sortedByShare.slice(6).reduce((a, b) => a + b.share, 0);
 
+  // Rank movers
+  const movers = useMemo(() => {
+    if (!current.length || !prev.length) return { climbers: [], fallers: [] };
+    const ch = rankChanges(current, prev, metric).filter((c) => c.delta !== 0);
+    const climbers = [...ch].sort((a, b) => b.delta - a.delta).slice(0, 3);
+    const fallers = [...ch].sort((a, b) => a.delta - b.delta).slice(0, 3);
+    return { climbers, fallers };
+  }, [current, prev, metric]);
+
+  // HHI concentration
+  const hhi = useMemo(() => {
+    if (!current.length) return null;
+    const now = computeHHI(current, metric);
+    const before = prev.length ? computeHHI(prev, metric) : null;
+    return { now, delta: before !== null ? now - before : null };
+  }, [current, prev, metric]);
+
+  // Quadrant scatter — share vs YoY growth, bubble = value
+  const quadrant = useMemo(() => {
+    if (!current.length || !twelveAgo.length) return [];
+    const total = totalFor(current, metric);
+    const prevMap = new Map(twelveAgo.map((r) => [r.app_name, r]));
+    return current
+      .map((r) => {
+        const cur = pickMetric(r, metric);
+        const past = prevMap.get(r.app_name);
+        const pastV = past ? pickMetric(past, metric) : 0;
+        if (cur <= 0 || pastV <= 0) return null;
+        const share = total ? (cur / total) * 100 : 0;
+        const yoy = ((cur - pastV) / pastV) * 100;
+        return {
+          app: r.app_name,
+          share,
+          yoy,
+          value: r.cit_value_cr,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null && x.share > 0.05);
+  }, [current, twelveAgo, metric]);
+
+  const quadrantMedianShare = useMemo(() => {
+    if (!quadrant.length) return 0;
+    const sorted = [...quadrant].map((q) => q.share).sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }, [quadrant]);
+
   return (
     <div className="grid grid-cols-12 gap-5">
       {/* Insight cards */}
