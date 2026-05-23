@@ -308,66 +308,57 @@ function TrendsPage() {
       </BentoCard>
 
 
-      {/* App selector */}
-      <BentoCard className="col-span-12" delay={220}>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <CardLabel>Compare</CardLabel>
-              <h3 className="font-serif text-2xl mt-1">
-                Pick up to 5 apps to chart
-              </h3>
-            </div>
-            <span className="font-mono text-xs text-muted-foreground">
-              {selected.length}/5 selected
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {allApps.map((app) => {
-              const isSel = selected.includes(app);
-              return (
-                <button
-                  key={app}
-                  onClick={() => {
-                    if (isSel) {
-                      setSelected(selected.filter((a) => a !== app));
-                    } else if (selected.length < 5) {
-                      setSelected([...selected, app]);
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    isSel
-                      ? "bg-foreground text-background"
-                      : "bg-foreground/5 text-foreground hover:bg-foreground/10"
-                  }`}
-                >
-                  {app}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </BentoCard>
-
       {/* Multi-line trend */}
       <BentoCard className="col-span-12 min-h-[420px]" delay={280}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
           <div>
             <CardLabel>24-month trajectory</CardLabel>
             <h3 className="font-serif text-2xl mt-1">
               {metric === "volume" ? "Transaction volume" : "Transaction value"} over time
             </h3>
           </div>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             {selected.map((app, i) => (
-              <span key={app} className="flex items-center gap-2 text-xs">
+              <span
+                key={app}
+                className="flex items-center gap-1.5 text-xs bg-foreground/5 rounded-full pl-2 pr-1 py-1"
+              >
                 <span
                   className="size-2 rounded-full"
                   style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }}
                 />
-                {app}
+                <span className="font-medium">{app}</span>
+                <button
+                  onClick={() => setSelected(selected.filter((a) => a !== app))}
+                  className="ml-0.5 text-muted-foreground hover:text-foreground rounded-full p-0.5 transition-colors"
+                  aria-label={`Remove ${app}`}
+                >
+                  ×
+                </button>
               </span>
             ))}
+            {selected.length < 5 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const app = e.target.value;
+                  if (app && !selected.includes(app)) {
+                    setSelected([...selected, app]);
+                  }
+                  e.target.value = "";
+                }}
+                className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="">+ Add app</option>
+                {allApps
+                  .filter((a) => !selected.includes(a))
+                  .map((app) => (
+                    <option key={app} value={app}>
+                      {app}
+                    </option>
+                  ))}
+              </select>
+            )}
           </div>
         </div>
         <div className="h-[340px] w-full">
