@@ -102,8 +102,20 @@ function OverviewPage() {
       ? `${(total / 1000).toFixed(2)}B`
       : `₹${(total / 100000).toFixed(2)}L Cr`;
 
+  const narrative = generateNarrative(month, year, current, previous, metric);
+
   return (
     <div className="grid grid-cols-12 gap-5">
+      {/* Narrative */}
+      {narrative && (
+        <BentoCard className="col-span-12" tone="dark">
+          <CardLabel className="text-background/60">This month in UPI</CardLabel>
+          <p className="font-serif text-xl lg:text-2xl mt-2 leading-snug text-background">
+            {narrative}
+          </p>
+        </BentoCard>
+      )}
+
       {/* Hero */}
       <BentoCard className="col-span-12 lg:col-span-8 min-h-[340px] flex flex-col justify-between">
         <div className="flex justify-between items-start gap-4">
