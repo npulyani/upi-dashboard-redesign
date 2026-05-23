@@ -1,0 +1,596 @@
+[
+  {
+    "app_name_raw": "PhonePe",
+    "app_name": "PhonePe",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6502.15,
+    "cit_value_cr": 1002387.84
+  },
+  {
+    "app_name_raw": "Google Pay",
+    "app_name": "Google Pay",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 5061.18,
+    "cit_value_cr": 695196.05
+  },
+  {
+    "app_name_raw": "Paytm",
+    "app_name": "Paytm",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1210.64,
+    "cit_value_cr": 133707.06
+  },
+  {
+    "app_name_raw": "Cred",
+    "app_name": "CRED",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 132.31,
+    "cit_value_cr": 44991.57
+  },
+  {
+    "app_name_raw": "Axis Bank Apps",
+    "app_name": "Axis Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 13.59,
+    "cit_value_cr": 3044.92
+  },
+  {
+    "app_name_raw": "Amazon Pay",
+    "app_name": "Amazon Pay",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 65.35,
+    "cit_value_cr": 6772.89
+  },
+  {
+    "app_name_raw": "ICICI Bank Apps",
+    "app_name": "ICICI Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 33.54,
+    "cit_value_cr": 14491.28
+  },
+  {
+    "app_name_raw": "Fampay",
+    "app_name": "FamPay",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 43.69,
+    "cit_value_cr": 528.01
+  },
+  {
+    "app_name_raw": "Kotak Mahindra Bank Apps",
+    "app_name": "Kotak Mahindra Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 39.14,
+    "cit_value_cr": 5763.37
+  },
+  {
+    "app_name_raw": "HDFC Bank Apps",
+    "app_name": "HDFC Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 33.07,
+    "cit_value_cr": 7289.09
+  },
+  {
+    "app_name_raw": "WhatsApp",
+    "app_name": "WhatsApp",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 31.21,
+    "cit_value_cr": 2536.99
+  },
+  {
+    "app_name_raw": "BHIM",
+    "app_name": "BHIM",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 30.04,
+    "cit_value_cr": 8339.37
+  },
+  {
+    "app_name_raw": "Yes Bank Apps",
+    "app_name": "Yes Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 24.13,
+    "cit_value_cr": 13833.3
+  },
+  {
+    "app_name_raw": "Airtel Payments Bank Apps",
+    "app_name": "Airtel Payments Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 15.64,
+    "cit_value_cr": 1162.62
+  },
+  {
+    "app_name_raw": "Bajaj Finserv",
+    "app_name": "Bajaj Finserv",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 15.81,
+    "cit_value_cr": 2803.2
+  },
+  {
+    "app_name_raw": "Mobikwik",
+    "app_name": "MobiKwik",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 8.27,
+    "cit_value_cr": 2190.01
+  },
+  {
+    "app_name_raw": "India Post Payments Bank Apps",
+    "app_name": "India Post Payments Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.82,
+    "cit_value_cr": 851.01
+  },
+  {
+    "app_name_raw": "Groww",
+    "app_name": "Groww",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.72,
+    "cit_value_cr": 3539.14
+  },
+  {
+    "app_name_raw": "State Bank of India Apps",
+    "app_name": "SBI",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.59,
+    "cit_value_cr": 2394.79
+  },
+  {
+    "app_name_raw": "IDFC Bank Apps",
+    "app_name": "IDFC First Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.41,
+    "cit_value_cr": 1581.28
+  },
+  {
+    "app_name_raw": "Samsung Pay",
+    "app_name": "Samsung Pay",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.24,
+    "cit_value_cr": 530.8
+  },
+  {
+    "app_name_raw": "Jupiter",
+    "app_name": "Jupiter Money",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 5.57,
+    "cit_value_cr": 709.07
+  },
+  {
+    "app_name_raw": "Flipkart",
+    "app_name": "Flipkart",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 5,
+    "cit_value_cr": 197.24
+  },
+  {
+    "app_name_raw": "Deutsche Bank Apps",
+    "app_name": "Deutsche Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 3.3,
+    "cit_value_cr": 453.57
+  },
+  {
+    "app_name_raw": "Federal Bank Apps",
+    "app_name": "Federal Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 6.11,
+    "cit_value_cr": 806.45
+  },
+  {
+    "app_name_raw": "Canara Bank Apps",
+    "app_name": "Canara Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 3.1,
+    "cit_value_cr": 798.84
+  },
+  {
+    "app_name_raw": "Navi",
+    "app_name": "Navi",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 3,
+    "cit_value_cr": 94.29
+  },
+  {
+    "app_name_raw": "Slice",
+    "app_name": "Slice",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 5.22,
+    "cit_value_cr": 538.12
+  },
+  {
+    "app_name_raw": "Jio Payments Bank Apps",
+    "app_name": "Jio Payments Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.87,
+    "cit_value_cr": 161.87
+  },
+  {
+    "app_name_raw": "Indian Bank Apps",
+    "app_name": "Indian Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.85,
+    "cit_value_cr": 340.92
+  },
+  {
+    "app_name_raw": "RBL Bank Apps",
+    "app_name": "RBL Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.56,
+    "cit_value_cr": 366.34
+  },
+  {
+    "app_name_raw": "Punjab National Bank Apps",
+    "app_name": "Punjab National Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.67,
+    "cit_value_cr": 411.13
+  },
+  {
+    "app_name_raw": "Timepay",
+    "app_name": "Timepay",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.37,
+    "cit_value_cr": 18.5
+  },
+  {
+    "app_name_raw": "Union Bank Apps",
+    "app_name": "Union Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.35,
+    "cit_value_cr": 517.15
+  },
+  {
+    "app_name_raw": "Omnicard",
+    "app_name": "OmniCard",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.29,
+    "cit_value_cr": 44.84
+  },
+  {
+    "app_name_raw": "Bank of Baroda Apps",
+    "app_name": "Bank of Baroda",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.95,
+    "cit_value_cr": 419.08
+  },
+  {
+    "app_name_raw": "Central Bank of India Apps",
+    "app_name": "Central Bank of India",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.86,
+    "cit_value_cr": 195.46
+  },
+  {
+    "app_name_raw": "AU Small Finance Bank Apps",
+    "app_name": "AU Small Finance Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.78,
+    "cit_value_cr": 279.91
+  },
+  {
+    "app_name_raw": "Gokiwi",
+    "app_name": "Kiwi",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.7,
+    "cit_value_cr": 100.1
+  },
+  {
+    "app_name_raw": "DBS Digibank Apps",
+    "app_name": "DBS Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.51,
+    "cit_value_cr": 202.89
+  },
+  {
+    "app_name_raw": "Shriram One",
+    "app_name": "Shriram One",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.48,
+    "cit_value_cr": 38.71
+  },
+  {
+    "app_name_raw": "South Indian Bank Apps",
+    "app_name": "South Indian Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.4,
+    "cit_value_cr": 120.88
+  },
+  {
+    "app_name_raw": "Fino Payments bank Apps",
+    "app_name": "Fino Payments Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.39,
+    "cit_value_cr": 50.97
+  },
+  {
+    "app_name_raw": "IndusInd Bank Apps",
+    "app_name": "IndusInd Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.39,
+    "cit_value_cr": 228.02
+  },
+  {
+    "app_name_raw": "HSBC Bank Apps",
+    "app_name": "HSBC Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.31,
+    "cit_value_cr": 138.16
+  },
+  {
+    "app_name_raw": "TataNeu",
+    "app_name": "Tata Neu",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.25,
+    "cit_value_cr": 25.46
+  },
+  {
+    "app_name_raw": "Bank of India Apps",
+    "app_name": "Bank of India",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.2,
+    "cit_value_cr": 78.81
+  },
+  {
+    "app_name_raw": "Standard Chartered Bank Apps",
+    "app_name": "Standard Chartered Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.19,
+    "cit_value_cr": 115.77
+  },
+  {
+    "app_name_raw": "Dhani",
+    "app_name": "Dhani",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.19,
+    "cit_value_cr": 5.98
+  },
+  {
+    "app_name_raw": "UCO Bank Apps",
+    "app_name": "UCO Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.18,
+    "cit_value_cr": 56.32
+  },
+  {
+    "app_name_raw": "Karnataka Bank Apps",
+    "app_name": "Karnataka Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.16,
+    "cit_value_cr": 25.58
+  },
+  {
+    "app_name_raw": "Jupiter Edge",
+    "app_name": "Jupiter Edge",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.14,
+    "cit_value_cr": 32.22
+  },
+  {
+    "app_name_raw": "Digikhata",
+    "app_name": "Digikhata",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.13,
+    "cit_value_cr": 48.01
+  },
+  {
+    "app_name_raw": "Indian Overseas Bank Apps",
+    "app_name": "Indian Overseas Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.11,
+    "cit_value_cr": 30.44
+  },
+  {
+    "app_name_raw": "Tamilnad Mercantile Bank Apps",
+    "app_name": "Tamilnad Mercantile Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.1,
+    "cit_value_cr": 28.72
+  },
+  {
+    "app_name_raw": "Ultracash",
+    "app_name": "Ultracash",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.09,
+    "cit_value_cr": 6.57
+  },
+  {
+    "app_name_raw": "Citi Bank Apps",
+    "app_name": "Citi Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.09,
+    "cit_value_cr": 66.7
+  },
+  {
+    "app_name_raw": "City Union Bank Apps",
+    "app_name": "City Union Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.08,
+    "cit_value_cr": 26.73
+  },
+  {
+    "app_name_raw": "NSDL Payments Bank Apps",
+    "app_name": "NSDL Payments Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.07,
+    "cit_value_cr": 10.57
+  },
+  {
+    "app_name_raw": "Bank of Maharashtra Apps",
+    "app_name": "Bank of Maharashtra",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.05,
+    "cit_value_cr": 11.6
+  },
+  {
+    "app_name_raw": "Karur Vysya Bank Apps",
+    "app_name": "Karur Vysya Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.05,
+    "cit_value_cr": 17.68
+  },
+  {
+    "app_name_raw": "Equitas Small Finance Bank Apps",
+    "app_name": "Equitas Small Finance Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.04,
+    "cit_value_cr": 26.62
+  },
+  {
+    "app_name_raw": "MakeMyTrip",
+    "app_name": "MakeMyTrip",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.03,
+    "cit_value_cr": 18.75
+  },
+  {
+    "app_name_raw": "Go Niyo",
+    "app_name": "Niyo Global",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.03,
+    "cit_value_cr": 12.86
+  },
+  {
+    "app_name_raw": "Allahabad Bank Apps",
+    "app_name": "Allahabad Bank",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 0.03,
+    "cit_value_cr": 6.32
+  },
+  {
+    "app_name_raw": "Other Apps",
+    "app_name": "Others",
+    "year": 2024,
+    "month": "Mar",
+    "month_num": 3,
+    "cit_volume_mn": 1.07,
+    "cit_value_cr": 109.12
+  }
+]
