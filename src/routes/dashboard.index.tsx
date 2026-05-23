@@ -153,12 +153,15 @@ function OverviewPage() {
             Dominance
           </span>
           <h3 className="mt-5 font-serif text-3xl lg:text-4xl leading-tight">
-            <em className="italic">{leader?.app_name ?? "—"}</em> leads with {leaderShare.toFixed(1)}% share.
+            <em className="italic">
+              {leader ? <AppLink app={leader.app_name} className="hover:underline underline-offset-4">{leader.app_name}</AppLink> : "—"}
+            </em>{" "}
+            leads with {leaderShare.toFixed(1)}% share.
           </h3>
         </div>
         <div className="pt-6 border-t border-white/15">
           <p className="text-white/70 text-sm mb-4">
-            Runner-up: {runnerUp?.app_name ?? "—"} ({runnerShare.toFixed(1)}%)
+            Runner-up: {runnerUp ? <AppLink app={runnerUp.app_name} className="hover:underline underline-offset-4 text-white">{runnerUp.app_name}</AppLink> : "—"} ({runnerShare.toFixed(1)}%)
           </p>
           <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden flex">
             <div className="h-full bg-white" style={{ width: `${leaderShare}%` }} />
@@ -184,7 +187,7 @@ function OverviewPage() {
               <span className="font-mono text-xs text-muted-foreground">#0{i + 1}</span>
             </div>
             <div className="mt-6">
-              <h4 className="font-serif text-2xl">{row.app_name}</h4>
+              <h4 className="font-serif text-2xl"><AppLink app={row.app_name} /></h4>
               <p className="mt-1 font-mono text-2xl font-medium text-primary tabular-nums">
                 {metric === "volume"
                   ? `${formatNumber(row.cit_volume_mn * 1e6, 1)}`
@@ -222,7 +225,7 @@ function OverviewPage() {
                 <span className="font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="font-medium text-sm truncate">{row.app_name}</span>
+                <span className="font-medium text-sm truncate"><AppLink app={row.app_name} /></span>
                 <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary/80"
