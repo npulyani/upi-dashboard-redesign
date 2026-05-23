@@ -16,6 +16,7 @@ import {
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
 import {
   getMonthData,
