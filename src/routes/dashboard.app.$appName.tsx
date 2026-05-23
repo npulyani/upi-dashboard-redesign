@@ -211,9 +211,12 @@ function AppDeepDive() {
         <BentoCard className="col-span-12 lg:col-span-8 min-h-[300px] flex flex-col justify-between">
           <div>
             <CardLabel>Provider · {stats?.latest.label}</CardLabel>
-            <h1 className="font-serif text-5xl lg:text-7xl mt-3 leading-[0.95]">
-              <em className="italic">{decoded}</em>
-            </h1>
+            <div className="mt-3 flex items-center gap-5">
+              <AppLogo app={decoded} size={72} rounded="lg" />
+              <h1 className="font-serif text-5xl lg:text-7xl leading-[0.95]">
+                <em className="italic">{decoded}</em>
+              </h1>
+            </div>
             <div className="mt-5 flex flex-wrap items-baseline gap-x-8 gap-y-3">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
