@@ -87,12 +87,18 @@ export function generateNarrative(
   const total = totalFor(current, metric);
   const prevTotal = totalFor(previous, metric);
   const ecosystemMoM = prevTotal ? ((total - prevTotal) / prevTotal) * 100 : 0;
-  const top3Share = sorted
-    .slice(0, 3)
-    .reduce((a, b) => a + pickMetric(b, metric), 0);
-  const top3Pct = total ? (top3Share / total) * 100 : 0;
+
+  const totalVolume = current.reduce((a, b) => a + b.cit_volume_mn, 0);
+  const totalValue = current.reduce((a, b) => a + b.cit_value_cr, 0);
+  const volumeDisplay = `${(totalVolume / 1000).toFixed(2)}B transactions`;
+  const valueDisplay = `₹${(totalValue / 100000).toFixed(2)} lakh crore`;
 
   const leader = sorted[0];
+  const runnerUp = sorted[1];
+  const leaderShare = leader && total ? (pickMetric(leader, metric) / total) * 100 : 0;
+  const runnerShare = runnerUp && total ? (pickMetric(runnerUp, metric) / total) * 100 : 0;
+  const top2Pct = leaderShare + runnerShare;
+
   const prevMap = new Map(previous.map((r) => [r.app_name, r]));
   const movers = sorted
     .map((r) => {
@@ -101,38 +107,43 @@ export function generateNarrative(
       const c = pickMetric(r, metric);
       const pv = pickMetric(p, metric);
       if (pv <= 0) return null;
-      return { app: r.app_name, pct: ((c - pv) / pv) * 100, abs: c };
+      return { app: r.app_name, pct: ((c - pv) / pv) * 100 };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  const leaderMoM = movers.find((m) => m.app === leader?.app_name);
-  // Fastest challenger = highest pct outside top 3
-  const challengers = movers.filter((m) => !sorted.slice(0, 3).find((s) => s.app_name === m.app));
+  const challengers = movers.filter(
+    (m) => !sorted.slice(0, 3).find((s) => s.app_name === m.app),
+  );
   const fastest = [...challengers].sort((a, b) => b.pct - a.pct)[0];
 
-  const totalDisplay =
-    metric === "volume"
-      ? `${(total / 1000).toFixed(2)}B transactions`
-      : `₹${(total / 100000).toFixed(2)} lakh crore`;
+  const prevNames = new Set(previous.map((r) => r.app_name));
+  const newApps = previous.length
+    ? current.filter((r) => !prevNames.has(r.app_name)).map((r) => r.app_name)
+    : [];
 
   const parts: string[] = [];
   parts.push(
-    `In ${month} ${year}, the top 3 apps controlled ${top3Pct.toFixed(1)}% of ${
-      metric === "volume" ? "transaction volume" : "transaction value"
-    }.`,
-  );
-  if (leader && leaderMoM) {
-    const verb = leaderMoM.pct >= 0 ? "extended its lead with" : "slipped";
-    parts.push(
-      `${leader.app_name} ${verb} ${leaderMoM.pct >= 0 ? "+" : ""}${leaderMoM.pct.toFixed(1)}% MoM${
-        fastest ? `, while ${fastest.app} grew fastest among challengers at +${fastest.pct.toFixed(1)}%` : ""
-      }.`,
-    );
-  }
-  parts.push(
-    `The ecosystem processed ${totalDisplay} — ${
+    `In ${month} ${year}, India's UPI ecosystem processed ${volumeDisplay} worth ${valueDisplay} — ${
       ecosystemMoM >= 0 ? "up" : "down"
     } ${Math.abs(ecosystemMoM).toFixed(1)}% from last month.`,
   );
+  if (leader && runnerUp) {
+    parts.push(
+      `${leader.app_name} leads with ${leaderShare.toFixed(1)}% share, followed by ${runnerUp.app_name} at ${runnerShare.toFixed(1)}% — together commanding ${top2Pct.toFixed(1)}% of ${
+        metric === "volume" ? "volume" : "value"
+      }.`,
+    );
+  }
+  if (fastest) {
+    parts.push(
+      `${fastest.app} was the fastest-growing challenger at ${fastest.pct >= 0 ? "+" : ""}${fastest.pct.toFixed(1)}% MoM.`,
+    );
+  }
+  if (newApps.length) {
+    const list = newApps.slice(0, 3).join(", ");
+    parts.push(
+      `${newApps.length === 1 ? "A new entrant" : "New entrants"} this month: ${list}${newApps.length > 3 ? ` and ${newApps.length - 3} more` : ""}.`,
+    );
+  }
   return parts.join(" ");
 }
