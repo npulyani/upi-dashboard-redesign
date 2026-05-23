@@ -10,50 +10,51 @@ export function MonthScrubber({
   month: string;
   onChange: (y: number, m: string) => void;
 }) {
-  const idx = useMemo(
-    () => AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month),
-    [year, month],
+  const years = useMemo(
+    () => Array.from(new Set(AVAILABLE_MONTHS.map((m) => m.year))),
+    [],
   );
-  const max = AVAILABLE_MONTHS.length - 1;
+
+  const monthsForYear = useMemo(
+    () => AVAILABLE_MONTHS.filter((m) => m.year === year),
+    [year],
+  );
 
   return (
-    <div className="flex items-center gap-4 w-full">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground shrink-0">
-        Jan '21
-      </span>
-      <div className="relative flex-1 h-6 flex items-center">
-        <div className="absolute inset-x-0 h-[2px] bg-foreground/10 rounded-full" />
-        <input
-          type="range"
-          min={0}
-          max={max}
-          value={idx < 0 ? max : idx}
-          onChange={(e) => {
-            const m = AVAILABLE_MONTHS[Number(e.target.value)];
-            onChange(m.year, m.month);
-          }}
-          className="relative w-full appearance-none bg-transparent cursor-pointer
-            [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:size-4
-            [&::-webkit-slider-thumb]:rounded-full
-            [&::-webkit-slider-thumb]:bg-card
-            [&::-webkit-slider-thumb]:ring-2
-            [&::-webkit-slider-thumb]:ring-primary
-            [&::-webkit-slider-thumb]:shadow-md
-            [&::-moz-range-thumb]:appearance-none
-            [&::-moz-range-thumb]:size-4
-            [&::-moz-range-thumb]:rounded-full
-            [&::-moz-range-thumb]:bg-card
-            [&::-moz-range-thumb]:border-2
-            [&::-moz-range-thumb]:border-primary"
-        />
-      </div>
-      <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-primary shrink-0 w-20 text-right">
-        {month} '{String(year).slice(2)}
-      </span>
+    <div className="flex items-center gap-3">
+      <select
+        value={year}
+        onChange={(e) => {
+          const newYear = Number(e.target.value);
+          const available = AVAILABLE_MONTHS.filter((m) => m.year === newYear);
+          const newMonth = available.find((m) => m.month === month)
+            ? month
+            : available[available.length - 1]?.month ?? month;
+          onChange(newYear, newMonth);
+        }}
+        className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <select
+        value={month}
+        onChange={(e) => onChange(year, e.target.value)}
+        className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-xs font-medium ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        {monthsForYear.map((m) => (
+          <option key={m.month} value={m.month}>
+            {m.month}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
+
 
 export function MetricToggle({
   metric,
