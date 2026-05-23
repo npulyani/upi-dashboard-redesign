@@ -10,6 +10,8 @@ import {
   getAppTrend,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import { avgTicket } from "@/lib/upi/insights";
+import { AppLink } from "@/components/upi/AppLink";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/data")({
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/dashboard/data")({
   component: DataPage,
 });
 
-type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name";
+type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket";
 type Row = {
   rank: number;
   app_name: string;
@@ -30,6 +32,7 @@ type Row = {
   value: number;
   share: number;
   mom: number | null;
+  ticket: number;
   sparkline: number[];
 };
 
@@ -97,6 +100,7 @@ function DataPage() {
         value: r.cit_value_cr,
         share: total ? (cur / total) * 100 : 0,
         mom: past ? ((cur - past) / past) * 100 : null,
+        ticket: avgTicket(r),
         sparkline: sparks[r.app_name] ?? [],
       };
     });
@@ -134,6 +138,10 @@ function DataPage() {
           av = a.mom ?? -Infinity;
           bv = b.mom ?? -Infinity;
           break;
+        case "ticket":
+          av = a.ticket;
+          bv = b.ticket;
+          break;
       }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
@@ -151,7 +159,7 @@ function DataPage() {
   }
 
   function exportCsv() {
-    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %"];
+    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)"];
     const lines = [header.join(",")];
     filtered.forEach((r) => {
       lines.push(
@@ -162,6 +170,7 @@ function DataPage() {
           r.value.toFixed(2),
           r.share.toFixed(3),
           r.mom === null ? "" : r.mom.toFixed(3),
+          r.ticket.toFixed(2),
         ].join(","),
       );
     });
