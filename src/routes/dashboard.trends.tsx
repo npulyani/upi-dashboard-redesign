@@ -296,6 +296,7 @@ function TrendsPage() {
             <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
               <span className="flex items-center gap-3">
                 <RankBadge delta={m.delta} />
+                <AppLogo app={m.app} size={22} />
                 <span className="font-medium text-sm"><AppLink app={m.app} /></span>
               </span>
               <span className="font-mono text-xs text-muted-foreground">
