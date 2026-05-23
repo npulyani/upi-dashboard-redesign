@@ -12,6 +12,7 @@ import {
 } from "@/lib/upi/queries";
 import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
+import { AppLogo } from "@/components/upi/AppLogo";
 import { AppMonthData } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/data")({
