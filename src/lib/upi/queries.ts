@@ -1,11 +1,11 @@
 import { supabase } from "../supabase";
 import { AppMonthData, MONTH_TO_NUM, NUM_TO_MONTH, StatewiseRow, StatewiseTrendPoint, TrendPoint } from "./types";
 
-// Generate available months: Jan 2021 → Mar 2026 (matches dataset)
+// Generate available months: Jan 2021 → Apr 2026 (matches dataset)
 function generateAvailableMonths(): { year: number; month: string; month_num: number }[] {
   const out: { year: number; month: string; month_num: number }[] = [];
   for (let y = 2021; y <= 2026; y++) {
-    const lastMonth = y === 2026 ? 3 : 12;
+    const lastMonth = y === 2026 ? 4 : 12;
     for (let m = 1; m <= lastMonth; m++) {
       out.push({ year: y, month: NUM_TO_MONTH[m], month_num: m });
     }
