@@ -7,6 +7,9 @@ export const getRouter = () => {
 
   const router = createRouter({
     routeTree,
+    // BASE_URL is set by Vite to the `base` config value (e.g. "/upi-dashboard-redesign/" or "/").
+    // Strip trailing slash so TanStack Router normalises paths correctly.
+    basepath: (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "/",
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,

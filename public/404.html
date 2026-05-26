@@ -5,18 +5,19 @@
     <title>State of UPI</title>
     <script>
       // GitHub Pages SPA routing trick.
-      // When a user navigates directly to a deep path (e.g. /dashboard/trends),
-      // GitHub Pages has no file there and serves this 404.html.
-      // We redirect to the root with the original path encoded as ?p=<path>,
-      // which index.html / main.tsx decodes and restores before the router starts.
-      var path = window.location.pathname;
-      var search = window.location.search;
-      var hash = window.location.hash;
-      window.location.replace(
-        "/" +
-          "?p=" +
-          encodeURIComponent(path + search + hash)
-      );
+      // GitHub Pages serves this file for any path it can't find.
+      // We encode the original path as ?p= and redirect to the site root so
+      // index.html loads, then main.tsx restores the path before the router starts.
+      //
+      // Auto-detects deployment context:
+      //   github.io  → base is the repo subdirectory  e.g. /upi-dashboard-redesign/
+      //   custom domain → base is /
+      var isGithubPages = window.location.hostname.endsWith('.github.io');
+      var base = isGithubPages
+        ? '/' + window.location.pathname.split('/')[1] + '/'
+        : '/';
+      var full = window.location.pathname + window.location.search + window.location.hash;
+      window.location.replace(base + '?p=' + encodeURIComponent(full));
     </script>
   </head>
   <body></body>

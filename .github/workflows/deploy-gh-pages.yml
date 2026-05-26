@@ -36,6 +36,10 @@ jobs:
       - name: Build static SPA
         run: npm run build:static
         env:
+          # Set base path to repo subdirectory for github.io hosting.
+          # Remove this line once the custom domain (upidashboard.in) is live —
+          # the default "/" will be correct for a custom domain.
+          VITE_BASE_PATH: /upi-dashboard-redesign/
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 

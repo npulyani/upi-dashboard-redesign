@@ -23,6 +23,9 @@ export default defineConfig({
     tailwindcss(),
     tsConfigPaths(),
   ],
+  // VITE_BASE_PATH=/upi-dashboard-redesign/  for github.io subdirectory
+  // VITE_BASE_PATH=/                        for custom domain (default)
+  base: process.env.VITE_BASE_PATH ?? "/",
   build: {
     outDir: "dist-static",
   },
