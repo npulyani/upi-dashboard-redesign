@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -57,7 +58,7 @@ type HistoryPoint = TrendPoint & {
 function AppDeepDive() {
   const { appName } = Route.useParams();
   const decoded = decodeURIComponent(appName);
-  const { metric, setMetric } = useDashboard();
+  const { metric, setMetric, year, month } = useDashboard();
 
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [neighbors, setNeighbors] = useState<{ app: string; rank: number }[]>([]);
@@ -95,17 +96,7 @@ function AppDeepDive() {
           ticket: r ? avgTicket(r) : 0,
         };
       });
-      // Neighbors at latest
-      const latestRows = all[all.length - 1];
-      const sorted = ranked(latestRows, metric);
-      const idx = sorted.findIndex((r) => r.app_name === decoded);
-      const around: { app: string; rank: number }[] = [];
-      [-2, -1, 1, 2].forEach((off) => {
-        const t = sorted[idx + off];
-        if (t) around.push({ app: t.app_name, rank: idx + off + 1 });
-      });
       setHistory(pts);
-      setNeighbors(around);
       setLoading(false);
     })();
     return () => {
@@ -113,13 +104,21 @@ function AppDeepDive() {
     };
   }, [decoded, metric]);
 
+  const selectedPoint = useMemo(() => {
+    return (
+      history.find((h) => h.year === year && h.month === month) ??
+      history[history.length - 1] ??
+      null
+    );
+  }, [history, year, month]);
+
   const stats = useMemo(() => {
-    if (!history.length) return null;
-    const latest = history[history.length - 1];
-    const prev = history[history.length - 2];
-    const yearAgo = history[history.length - 13];
-    const threeYearAgo = history[history.length - 37];
-    const curV = pickMetric(latest, metric);
+    if (!history.length || !selectedPoint) return null;
+    const idx = history.indexOf(selectedPoint);
+    const prev = history[idx - 1] ?? null;
+    const yearAgo = history[idx - 12] ?? null;
+    const threeYearAgo = history[idx - 36] ?? null;
+    const curV = pickMetric(selectedPoint, metric);
     const prevV = prev ? pickMetric(prev, metric) : 0;
     const yaV = yearAgo ? pickMetric(yearAgo, metric) : 0;
     const tyaV = threeYearAgo ? pickMetric(threeYearAgo, metric) : 0;
@@ -130,23 +129,34 @@ function AppDeepDive() {
     const active = history.filter((h) => pickMetric(h, metric) > 0);
     const peak = active.reduce(
       (p, c) => (pickMetric(c, metric) > pickMetric(p, metric) ? c : p),
-      active[0] ?? latest,
+      active[0] ?? selectedPoint,
     );
     const low = active.reduce(
       (p, c) => (pickMetric(c, metric) < pickMetric(p, metric) ? c : p),
-      active[0] ?? latest,
+      active[0] ?? selectedPoint,
     );
-    // longest streak at #1
     let streak = 0;
     let best = 0;
     history.forEach((h) => {
-      if (h.rank === 1) {
-        streak += 1;
-        best = Math.max(best, streak);
-      } else streak = 0;
+      if (h.rank === 1) { streak += 1; best = Math.max(best, streak); } else streak = 0;
     });
-    return { latest, mom, yoy, cagr3, peak, low, bestStreak: best, curV };
-  }, [history, metric]);
+    return { latest: selectedPoint, mom, yoy, cagr3, peak, low, bestStreak: best, curV };
+  }, [history, metric, selectedPoint]);
+
+  useEffect(() => {
+    if (!history.length) return;
+    getMonthData(year, month).then((rows) => {
+      const sortedRows = ranked(rows, metric);
+      const idx = sortedRows.findIndex((r) => r.app_name === decoded);
+      if (idx < 0) { setNeighbors([]); return; }
+      const around: { app: string; rank: number }[] = [];
+      [-2, -1, 1, 2].forEach((off) => {
+        const t = sortedRows[idx + off];
+        if (t) around.push({ app: t.app_name, rank: idx + off + 1 });
+      });
+      setNeighbors(around);
+    });
+  }, [year, month, metric, decoded, history.length]);
 
   function exportCsv() {
     const header = ["Year", "Month", "Volume (Mn)", "Value (Cr)", "Rank", "Share %", "Avg Ticket (₹)"];
@@ -319,6 +329,13 @@ function AppDeepDive() {
                     metricLabel,
                   ]}
                 />
+                <ReferenceLine
+                  x={selectedPoint?.label}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.5}
+                />
                 <Area
                   type="monotone"
                   dataKey={metric === "volume" ? "cit_volume_mn" : "cit_value_cr"}
@@ -365,6 +382,13 @@ function AppDeepDive() {
                   }}
                   formatter={(v: number) => [`#${v}`, "Rank"]}
                 />
+                <ReferenceLine
+                  x={selectedPoint?.label}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.5}
+                />
                 <Line type="stepAfter" dataKey="rank" stroke="currentColor" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -373,7 +397,7 @@ function AppDeepDive() {
 
         {/* Neighbors */}
         <BentoCard className="col-span-12 lg:col-span-5 min-h-[300px]" delay={260}>
-          <CardLabel>Movers around #{stats?.latest.rank ?? "—"}</CardLabel>
+          <CardLabel>Movers around #{stats?.latest.rank ?? "—"} · {month} {year}</CardLabel>
           <h3 className="font-serif text-2xl mt-1 mb-4">Direct neighbors</h3>
           <ul className="space-y-2">
             {neighbors.map((n) => (

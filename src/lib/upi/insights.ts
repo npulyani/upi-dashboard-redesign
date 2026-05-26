@@ -81,6 +81,7 @@ export function generateNarrative(
   current: AppMonthData[],
   previous: AppMonthData[],
   metric: Metric,
+  topStates?: { displayName: string; share: number }[],
 ): string {
   if (!current.length) return "";
   const sorted = ranked(current, metric);
@@ -143,6 +144,12 @@ export function generateNarrative(
     const list = newApps.slice(0, 3).join(", ");
     parts.push(
       `${newApps.length === 1 ? "A new entrant" : "New entrants"} this month: ${list}${newApps.length > 3 ? ` and ${newApps.length - 3} more` : ""}.`,
+    );
+  }
+  if (topStates && topStates.length >= 2) {
+    const metricWord = metric === "volume" ? "transactions" : "value";
+    parts.push(
+      `Geographically, ${topStates[0].displayName} leads with ${topStates[0].share.toFixed(1)}% of ${metricWord}, followed by ${topStates[1].displayName} at ${topStates[1].share.toFixed(1)}%.`,
     );
   }
   return parts.join(" ");

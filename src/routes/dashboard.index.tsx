@@ -5,15 +5,17 @@ import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
+import { StateMap } from "@/components/upi/StateMap";
 import {
   getMonthData,
   getPreviousMonth,
   getAppTrend,
+  getStatewiseData,
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
 import { generateNarrative } from "@/lib/upi/insights";
-import { AppMonthData } from "@/lib/upi/types";
+import { AppMonthData, StatewiseRow } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
   component: OverviewPage,
@@ -24,18 +26,23 @@ function OverviewPage() {
   const [current, setCurrent] = useState<AppMonthData[]>([]);
   const [previous, setPrevious] = useState<AppMonthData[]>([]);
   const [leaderTrend, setLeaderTrend] = useState<number[]>([]);
+  const [stateData, setStateData] = useState<StatewiseRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const cur = await getMonthData(year, month);
+      const [cur, states] = await Promise.all([
+        getMonthData(year, month),
+        getStatewiseData(year, month),
+      ]);
       const prev = getPreviousMonth(year, month);
       const prevData = prev ? await getMonthData(prev.year, prev.month) : [];
       if (cancelled) return;
       setCurrent(cur);
       setPrevious(prevData);
+      setStateData(states);
 
       const leader = [...cur].sort((a, b) =>
         metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
@@ -89,6 +96,40 @@ function OverviewPage() {
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
 
+  // State leaderboard with client-side % share (fixes Mar 2026 stored contribution being wrong)
+  const stateLeaderboard = useMemo(() => {
+    if (!stateData.length) return [];
+    const isGeo = (s: string) =>
+      s.trim() !== "" &&
+      !s.toLowerCase().includes("unclassified") &&
+      !s.toLowerCase().includes("total");
+    const statewiseRows = stateData.filter((r) => r.district === "" && isGeo(r.state_union_territory));
+    const totalRows = stateData.filter(
+      (r) =>
+        r.district === "" &&
+        r.state_union_territory.toLowerCase().endsWith(" total") &&
+        !r.state_union_territory.toLowerCase().includes("unclassified"),
+    );
+    const source = statewiseRows.length > 0 ? statewiseRows : totalRows;
+    const rows = source.map((r) => ({
+      name: r.state_union_territory.replace(/ total$/i, "").trim(),
+      volume: r.volume_in_mn,
+      value: r.value_in_cr,
+    }));
+    const sum = rows.reduce((a, r) => a + (metric === "volume" ? r.volume : r.value), 0);
+    return rows
+      .map((r) => {
+        const metricValue = metric === "volume" ? r.volume : r.value;
+        return {
+          ...r,
+          displayName: r.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+          metricValue,
+          share: sum > 0 ? (metricValue / sum) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.metricValue - a.metricValue);
+  }, [stateData, metric]);
+
   if (loading && current.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground font-mono text-xs uppercase tracking-widest">
@@ -103,7 +144,7 @@ function OverviewPage() {
       ? `${(total / 1000).toFixed(2)}B`
       : `₹${(total / 100000).toFixed(2)}L Cr`;
 
-  const narrative = generateNarrative(month, year, current, previous, metric);
+  const narrative = generateNarrative(month, year, current, previous, metric, stateLeaderboard.slice(0, 2));
 
   const top2Share =
     (((sorted[0]?.cit_volume_mn ?? 0) + (sorted[1]?.cit_volume_mn ?? 0)) /
@@ -186,6 +227,61 @@ function OverviewPage() {
           </BentoCard>
         );
       })}
+
+      {/* India state map + leaderboard */}
+      <BentoCard className="col-span-12" delay={380}>
+        <CardLabel>UPI by State · {month} {year}</CardLabel>
+        <h3 className="font-serif text-2xl mt-1">Geographic distribution</h3>
+        {stateLeaderboard.length > 0 ? (
+          <div className="mt-4 grid grid-cols-[260px_1fr] gap-6">
+            {/* State leaderboard */}
+            <ol className="overflow-y-auto h-[560px] space-y-0.5 pr-1">
+              {stateLeaderboard.map((row, i) => {
+                const w = (row.metricValue / stateLeaderboard[0].metricValue) * 100;
+                return (
+                  <li
+                    key={row.name}
+                    className="grid grid-cols-[20px_1fr_52px] items-center gap-2 py-2 border-b border-foreground/[0.04] last:border-0"
+                  >
+                    <span className="font-mono text-[10px] text-muted-foreground leading-none">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="font-medium text-xs truncate block leading-none">
+                        {row.displayName}
+                      </span>
+                      <div className="mt-1.5 h-1 w-full bg-foreground/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-primary/75"
+                          style={{ width: `${w}%`, transition: "width .5s cubic-bezier(.16,1,.3,1)" }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-right leading-none">
+                      <span className="font-mono text-[10px] text-primary tabular-nums block">
+                        {metric === "volume"
+                          ? `${row.volume.toFixed(1)}M`
+                          : `₹${formatIndianNumber(row.value)}`}
+                      </span>
+                      <span className="font-mono text-[9px] text-muted-foreground block mt-0.5">
+                        {row.share.toFixed(1)}%
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+            {/* Map */}
+            <div className="h-[560px]">
+              <StateMap data={stateData} metric={metric} />
+            </div>
+          </div>
+        ) : (
+          <p className="mt-6 font-mono text-xs text-muted-foreground uppercase tracking-widest">
+            No statewise data available for this period
+          </p>
+        )}
+      </BentoCard>
 
       {/* Top 10 ranked list */}
       <BentoCard className="col-span-12" delay={420}>

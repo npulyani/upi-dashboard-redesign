@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { AppMonthData, MONTH_TO_NUM, NUM_TO_MONTH, TrendPoint } from "./types";
+import { AppMonthData, MONTH_TO_NUM, NUM_TO_MONTH, StatewiseRow, StatewiseTrendPoint, TrendPoint } from "./types";
 
 // Generate available months: Jan 2021 → Mar 2026 (matches dataset)
 function generateAvailableMonths(): { year: number; month: string; month_num: number }[] {
@@ -125,6 +125,97 @@ export async function getUniqueApps(): Promise<string[]> {
   const apps = new Set<string>();
   sets.flat().forEach((r) => apps.add(r.app_name));
   return Array.from(apps).sort();
+}
+
+const statewiseCache = new Map<string, StatewiseRow[]>();
+
+export async function getStatewiseData(year: number, month: string): Promise<StatewiseRow[]> {
+  const key = `${year}-${month}`;
+  if (statewiseCache.has(key)) return statewiseCache.get(key)!;
+
+  const monthNum = MONTH_TO_NUM[month];
+  const { data, error } = await supabase
+    .from("upi_statewise_data")
+    .select("year, month, month_num, state_union_territory, district, volume_in_mn, value_in_cr, volume_contribution, value_contribution")
+    .eq("year", year)
+    .eq("month", month)
+    .order("volume_in_mn", { ascending: false });
+
+  if (error || !data) return [];
+
+  const rows: StatewiseRow[] = data.map((r) => ({
+    year: r.year,
+    month: r.month,
+    month_num: r.month_num ?? monthNum,
+    state_union_territory: r.state_union_territory,
+    district: r.district ?? "",
+    volume_in_mn: Number(r.volume_in_mn),
+    value_in_cr: Number(r.value_in_cr),
+    volume_contribution: Number(r.volume_contribution),
+    value_contribution: Number(r.value_contribution),
+  }));
+
+  statewiseCache.set(key, rows);
+  return rows;
+}
+
+const statewiseTrendCache = new Map<string, StatewiseTrendPoint[]>();
+
+export async function getStatewiseTrend(stateName: string): Promise<StatewiseTrendPoint[]> {
+  if (statewiseTrendCache.has(stateName)) return statewiseTrendCache.get(stateName)!;
+
+  const { data, error } = await supabase
+    .from("upi_statewise_data")
+    .select("year, month, month_num, volume_in_mn, value_in_cr")
+    .eq("state_union_territory", stateName)
+    .eq("district", "")
+    .order("year", { ascending: true })
+    .order("month_num", { ascending: true });
+
+  if (error || !data) return [];
+
+  const points: StatewiseTrendPoint[] = data.map((r, i) => {
+    const prev = data[i - 1];
+    const vol = Number(r.volume_in_mn);
+    const val = Number(r.value_in_cr);
+    const prevVol = prev ? Number(prev.volume_in_mn) : 0;
+    const prevVal = prev ? Number(prev.value_in_cr) : 0;
+    return {
+      year: r.year,
+      month: r.month,
+      month_num: r.month_num,
+      label: `${r.month} '${String(r.year).slice(2)}`,
+      volume_in_mn: vol,
+      value_in_cr: val,
+      mom_volume_pct: prev && prevVol ? ((vol - prevVol) / prevVol) * 100 : null,
+      mom_value_pct: prev && prevVal ? ((val - prevVal) / prevVal) * 100 : null,
+    };
+  });
+
+  statewiseTrendCache.set(stateName, points);
+  return points;
+}
+
+let uniqueStatesCachePromise: Promise<string[]> | null = null;
+
+export async function getUniqueStates(): Promise<string[]> {
+  if (uniqueStatesCachePromise) return uniqueStatesCachePromise;
+
+  uniqueStatesCachePromise = (async () => {
+    const { data, error } = await supabase
+      .from("upi_statewise_data")
+      .select("state_union_territory")
+      .eq("district", "")
+      .not("state_union_territory", "ilike", "%total%")
+      .not("state_union_territory", "ilike", "%unclassified%")
+      .order("state_union_territory");
+    if (error || !data) return [];
+    const seen = new Set<string>();
+    for (const r of data) if (r.state_union_territory) seen.add(r.state_union_territory as string);
+    return Array.from(seen);
+  })();
+
+  return uniqueStatesCachePromise;
 }
 
 export function formatNumber(n: number, digits = 1): string {

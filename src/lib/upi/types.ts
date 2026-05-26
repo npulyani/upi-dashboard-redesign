@@ -27,6 +27,30 @@ export interface TrendPoint {
 
 export type Metric = "volume" | "value";
 
+export interface StatewiseTrendPoint {
+  year: number;
+  month: string;
+  month_num: number;
+  label: string;
+  volume_in_mn: number;
+  value_in_cr: number;
+  mom_volume_pct: number | null;
+  mom_value_pct: number | null;
+}
+
+export interface StatewiseRow {
+  year: number;
+  month: string;
+  month_num: number;
+  state_union_territory: string;
+  /** Empty string for statewise/total rows; district name for district-level rows. */
+  district: string;
+  volume_in_mn: number;
+  value_in_cr: number;
+  volume_contribution: number;
+  value_contribution: number;
+}
+
 export const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

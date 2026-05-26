@@ -24,6 +24,8 @@ import {
   getMultiAppTrend,
   getUniqueApps,
   getMonthOffset,
+  getStatewiseTrend,
+  getUniqueStates,
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
@@ -33,7 +35,7 @@ import {
   rankChanges,
   totalFor,
 } from "@/lib/upi/insights";
-import { AppMonthData } from "@/lib/upi/types";
+import { AppMonthData, StatewiseTrendPoint } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/trends")({
   head: () => ({
@@ -62,6 +64,10 @@ function TrendsPage() {
   const [sixAgo, setSixAgo] = useState<AppMonthData[]>([]);
   const [twelveAgo, setTwelveAgo] = useState<AppMonthData[]>([]);
   const [trendRows, setTrendRows] = useState<Record<string, number | string>[]>([]);
+
+  const [allStates, setAllStates] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("MAHARASHTRA");
+  const [stateTrend, setStateTrend] = useState<StatewiseTrendPoint[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -121,6 +127,27 @@ function TrendsPage() {
       cancelled = true;
     };
   }, [selected, year, month]);
+
+  // Load states list once
+  useEffect(() => {
+    getUniqueStates().then((states) => {
+      setAllStates(states);
+      if (!states.includes("MAHARASHTRA") && states.length > 0) {
+        setSelectedState(states[0]);
+      }
+    });
+  }, []);
+
+  // Load state trend when selected state changes
+  useEffect(() => {
+    if (!selectedState) return;
+    let cancelled = false;
+    (async () => {
+      const trend = await getStatewiseTrend(selectedState);
+      if (!cancelled) setStateTrend(trend);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedState]);
 
   // Insights
   const insights = useMemo(() => {
@@ -545,6 +572,68 @@ function TrendsPage() {
             </span>
           )}
         </div>
+      </BentoCard>
+
+      {/* State MoM growth */}
+      <BentoCard className="col-span-12" delay={500}>
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+          <div>
+            <CardLabel>State growth</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">Month-on-month growth by state</h3>
+          </div>
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value)}
+            className="font-mono text-xs border border-border rounded px-2 py-1.5 bg-background text-foreground"
+          >
+            {allStates.map((s) => (
+              <option key={s} value={s}>
+                {s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+              </option>
+            ))}
+          </select>
+        </div>
+        {stateTrend.filter((p) => p.mom_volume_pct !== null).length === 0 ? (
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest py-8 text-center">
+            No trend data available
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart
+              data={stateTrend.filter((p) =>
+                metric === "volume" ? p.mom_volume_pct !== null : p.mom_value_pct !== null,
+              )}
+              margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="currentColor" strokeOpacity={0.08} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={(v: number) => `${v.toFixed(1)}%`}
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <ReferenceLine y={0} stroke="currentColor" strokeOpacity={0.2} />
+              <Tooltip
+                contentStyle={{ fontSize: 11, fontFamily: "var(--font-mono)", border: "1px solid var(--border)", borderRadius: 8 }}
+                formatter={(v: number) => [`${v.toFixed(2)}%`, "MoM growth"]}
+              />
+              <Line
+                type="monotone"
+                dataKey={metric === "volume" ? "mom_volume_pct" : "mom_value_pct"}
+                stroke="var(--color-chart-1)"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </BentoCard>
 
       {/* Period comparison */}
