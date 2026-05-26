@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Bar,
+  BarChart,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -18,7 +20,9 @@ import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
+import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import {
+  getAllMonthsData,
   getMonthData,
   getPreviousMonth,
   getMultiAppTrend,
@@ -30,9 +34,11 @@ import {
   formatIndianNumber,
 } from "@/lib/upi/queries";
 import {
-  computeHHI,
+  avgTicket,
+  buildSeasonalityMatrix,
   pickMetric,
   rankChanges,
+  SeasonalityCell,
   totalFor,
 } from "@/lib/upi/insights";
 import { AppMonthData, StatewiseTrendPoint } from "@/lib/upi/types";
@@ -68,6 +74,31 @@ function TrendsPage() {
   const [allStates, setAllStates] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string>("MAHARASHTRA");
   const [stateTrend, setStateTrend] = useState<StatewiseTrendPoint[]>([]);
+  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
+  const [seasonalityApp, setSeasonalityApp] = useState<string>("__ecosystem__");
+
+  // Ticket size trend (reuses trendRows which already has volume + value per app)
+  const ticketRows = useMemo((): Record<string, number | string>[] => {
+    return trendRows.map((row) => {
+      const out: Record<string, number | string> = { label: row.label, year: row.year, month: row.month };
+      for (const app of selected) {
+        const vol = (row[app] as number) ?? 0;
+        const val = (row[`${app}__value`] as number) ?? 0;
+        out[`${app}__ticket`] = vol > 0 ? (val * 1e7) / (vol * 1e6) : 0;
+      }
+      return out;
+    });
+  }, [trendRows, selected]);
+
+  // Current month ticket size per app (all apps, for ranked bar)
+  const currentTickets = useMemo(() => {
+    if (!current.length) return [];
+    return [...current]
+      .filter((r) => r.cit_volume_mn > 0)
+      .map((r) => ({ app: r.app_name, ticket: avgTicket(r) }))
+      .sort((a, b) => b.ticket - a.ticket)
+      .slice(0, 15);
+  }, [current]);
 
   useEffect(() => {
     (async () => {
@@ -149,6 +180,19 @@ function TrendsPage() {
     return () => { cancelled = true; };
   }, [selectedState]);
 
+  // Load seasonality matrix
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const all = await getAllMonthsData();
+      if (cancelled) return;
+      const appArg = seasonalityApp === "__ecosystem__" ? undefined : seasonalityApp;
+      const matrix = buildSeasonalityMatrix(all, metric, appArg);
+      setSeasonalityMatrix(matrix);
+    })();
+    return () => { cancelled = true; };
+  }, [metric, seasonalityApp]);
+
   // Insights
   const insights = useMemo(() => {
     if (!current.length || !prev.length) return null;
@@ -229,14 +273,6 @@ function TrendsPage() {
     return { climbers, fallers };
   }, [current, prev, metric]);
 
-  // HHI concentration
-  const hhi = useMemo(() => {
-    if (!current.length) return null;
-    const now = computeHHI(current, metric);
-    const before = prev.length ? computeHHI(prev, metric) : null;
-    return { now, delta: before !== null ? now - before : null };
-  }, [current, prev, metric]);
-
   // Quadrant scatter — share vs YoY growth, bubble = value
   const quadrant = useMemo(() => {
     if (!current.length || !twelveAgo.length) return [];
@@ -269,7 +305,7 @@ function TrendsPage() {
   return (
     <div className="grid grid-cols-12 gap-5">
       {/* Insight cards */}
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]">
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[160px]">
         <CardLabel>Ecosystem MoM</CardLabel>
         <p className="mt-3 font-serif text-5xl">
           {insights ? `${insights.ecosystem >= 0 ? "+" : ""}${insights.ecosystem.toFixed(1)}%` : "—"}
@@ -278,16 +314,7 @@ function TrendsPage() {
           Aggregate {metric === "volume" ? "volume" : "value"} vs previous month.
         </p>
       </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={80}>
-        <CardLabel>Market concentration · HHI</CardLabel>
-        <p className="mt-3 font-serif text-5xl">{hhi ? Math.round(hhi.now) : "—"}</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {hhi?.delta !== null && hhi?.delta !== undefined
-            ? `${hhi.delta >= 0 ? "More" : "Less"} concentrated than last month (${hhi.delta >= 0 ? "+" : ""}${hhi.delta.toFixed(0)})`
-            : "Sum of squared market shares."}
-        </p>
-      </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-4 min-h-[160px]" delay={160}>
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[160px]" delay={80}>
         <CardLabel>Fastest MoM grower</CardLabel>
         <p className="mt-3 font-serif text-3xl">
           {insights?.gainer ? <AppLink app={insights.gainer.name} /> : "—"}
@@ -523,6 +550,84 @@ function TrendsPage() {
         </div>
       </BentoCard>
 
+      {/* Ticket size */}
+      <BentoCard className="col-span-12 min-h-[420px]" delay={320}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
+          <div>
+            <CardLabel>Average ticket size · ₹ per transaction</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">Who's getting bigger transactions?</h3>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">24-month trend (selected apps)</p>
+            <div className="h-[260px]">
+              <ResponsiveContainer>
+                <LineChart data={ticketRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    stroke="var(--color-muted-foreground)"
+                    tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                    axisLine={false} tickLine={false}
+                    interval={Math.max(0, Math.floor(ticketRows.length / 6))}
+                  />
+                  <YAxis
+                    stroke="var(--color-muted-foreground)"
+                    tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                    axisLine={false} tickLine={false}
+                    tickFormatter={(v) => `₹${formatNumber(v as number, 0)}`}
+                    width={48}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)", background: "var(--color-card)", fontSize: 11 }}
+                    formatter={(v: number, name: string) => [`₹${Math.round(v).toLocaleString("en-IN")}`, name.replace("__ticket", "")]}
+                  />
+                  {selected.map((app, i) => (
+                    <Line
+                      key={app}
+                      type="monotone"
+                      dataKey={`${app}__ticket`}
+                      name={`${app}__ticket`}
+                      stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Current month · top 15 apps</p>
+            <div className="h-[260px]">
+              <ResponsiveContainer>
+                <BarChart data={currentTickets} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                    axisLine={false} tickLine={false}
+                    tickFormatter={(v) => `₹${formatNumber(v as number, 0)}`}
+                  />
+                  <YAxis
+                    dataKey="app"
+                    type="category"
+                    tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                    axisLine={false} tickLine={false}
+                    width={72}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)", background: "var(--color-card)", fontSize: 11 }}
+                    formatter={(v: number) => [`₹${Math.round(v).toLocaleString("en-IN")}`, "Avg ticket"]}
+                  />
+                  <Bar dataKey="ticket" fill="var(--color-chart-1)" fillOpacity={0.75} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </BentoCard>
+
       {/* Market share stacked bar */}
 
       <BentoCard className="col-span-12 lg:col-span-7 min-h-[260px]" delay={340}>
@@ -634,6 +739,27 @@ function TrendsPage() {
             </LineChart>
           </ResponsiveContainer>
         )}
+      </BentoCard>
+
+      {/* Seasonality heatmap */}
+      <BentoCard className="col-span-12" delay={450}>
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+          <div>
+            <CardLabel>Seasonality · MoM growth by month</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">The festival effect</h3>
+          </div>
+          <select
+            value={seasonalityApp}
+            onChange={(e) => setSeasonalityApp(e.target.value)}
+            className="font-mono text-xs border border-border rounded px-2 py-1.5 bg-background text-foreground"
+          >
+            <option value="__ecosystem__">Ecosystem total</option>
+            {allApps.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+        <SeasonalityHeatmap matrix={seasonalityMatrix} />
       </BentoCard>
 
       {/* Period comparison */}

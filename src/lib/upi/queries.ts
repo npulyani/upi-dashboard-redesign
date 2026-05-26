@@ -196,6 +196,24 @@ export async function getStatewiseTrend(stateName: string): Promise<StatewiseTre
   return points;
 }
 
+let allMonthsCache: { year: number; month: string; month_num: number; rows: AppMonthData[] }[] | null = null;
+
+export async function getAllMonthsData(): Promise<
+  { year: number; month: string; month_num: number; rows: AppMonthData[] }[]
+> {
+  if (allMonthsCache) return allMonthsCache;
+  const all = await Promise.all(
+    AVAILABLE_MONTHS.map(async (m) => ({
+      year: m.year,
+      month: m.month,
+      month_num: m.month_num,
+      rows: await getMonthData(m.year, m.month),
+    })),
+  );
+  allMonthsCache = all;
+  return all;
+}
+
 let uniqueStatesCachePromise: Promise<string[]> | null = null;
 
 export async function getUniqueStates(): Promise<string[]> {

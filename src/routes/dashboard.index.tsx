@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
@@ -14,7 +14,8 @@ import {
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
-import { generateNarrative } from "@/lib/upi/insights";
+import { generateNarrative, decomposeGrowth } from "@/lib/upi/insights";
+import { ShareButton } from "@/components/upi/ShareButton";
 import { AppMonthData, StatewiseRow } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -28,6 +29,7 @@ function OverviewPage() {
   const [leaderTrend, setLeaderTrend] = useState<number[]>([]);
   const [stateData, setStateData] = useState<StatewiseRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,10 +171,13 @@ function OverviewPage() {
       )}
 
       {/* Hero */}
-      <BentoCard className="col-span-12 min-h-[280px] flex flex-col justify-between">
+      <BentoCard className="col-span-12 min-h-[280px] flex flex-col justify-between" ref={heroRef}>
         <div className="flex justify-between items-start gap-4">
-          <div>
-            <CardLabel>Total {metricLabel} — {month} {year}</CardLabel>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <CardLabel>Total {metricLabel} — {month} {year}</CardLabel>
+              <ShareButton targetRef={heroRef} label="Share" />
+            </div>
             <h2 className="font-serif text-6xl lg:text-8xl mt-3 leading-[0.9] animate-number">
               {totalDisplay}
             </h2>
@@ -195,6 +200,9 @@ function OverviewPage() {
           </div>
         </div>
       </BentoCard>
+
+      {/* Growth Anatomy */}
+      <GrowthAnatomyCard current={current} previous={previous} />
 
       {/* Top 4 cards */}
       {top4.map((row, i) => {
@@ -325,6 +333,58 @@ function OverviewPage() {
         </ol>
       </BentoCard>
     </div>
+  );
+}
+
+function GrowthAnatomyCard({ current, previous }: { current: AppMonthData[]; previous: AppMonthData[] }) {
+  const d = decomposeGrowth(current, previous);
+  if (!d || d.total === 0) return null;
+
+  const volPct = d.total !== 0 ? (d.volumeEffect / d.total) * 100 : 0;
+  const tickPct = d.total !== 0 ? (d.ticketEffect / d.total) * 100 : 0;
+  const sign = (n: number) => (n >= 0 ? "+" : "");
+  const isGrowth = d.total >= 0;
+
+  return (
+    <BentoCard className="col-span-12 md:col-span-6" delay={140}>
+      <CardLabel>Growth anatomy · this month</CardLabel>
+      <h3 className="font-serif text-2xl mt-1 mb-4">Why value {isGrowth ? "grew" : "fell"}</h3>
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-muted-foreground">More transactions</span>
+            <span className={`font-mono font-medium ${d.volumeEffect >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {sign(d.volumeEffect)}{Math.abs(volPct).toFixed(0)}%
+            </span>
+          </div>
+          <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${d.volumeEffect >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
+              style={{ width: `${Math.min(100, Math.abs(volPct))}%` }}
+            />
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-muted-foreground">Larger ticket size</span>
+            <span className={`font-mono font-medium ${d.ticketEffect >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {sign(d.ticketEffect)}{Math.abs(tickPct).toFixed(0)}%
+            </span>
+          </div>
+          <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${d.ticketEffect >= 0 ? "bg-blue-500" : "bg-rose-400"}`}
+              style={{ width: `${Math.min(100, Math.abs(tickPct))}%` }}
+            />
+          </div>
+        </div>
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
+        {Math.abs(volPct) > Math.abs(tickPct)
+          ? `Volume-driven: ${Math.abs(volPct).toFixed(0)}% of value change came from ${d.volumeEffect >= 0 ? "more" : "fewer"} transactions.`
+          : `Ticket-driven: ${Math.abs(tickPct).toFixed(0)}% of value change came from ${d.ticketEffect >= 0 ? "higher" : "lower"} avg transaction size.`}
+      </p>
+    </BentoCard>
   );
 }
 

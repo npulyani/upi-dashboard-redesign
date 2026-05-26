@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardYearRouteImport } from './routes/dashboard.year'
 import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
+import { Route as DashboardMilestonesRouteImport } from './routes/dashboard.milestones'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
 import { Route as DashboardAppAppNameRouteImport } from './routes/dashboard.app.$appName'
 
@@ -31,9 +33,19 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardYearRoute = DashboardYearRouteImport.update({
+  id: '/year',
+  path: '/year',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardTrendsRoute = DashboardTrendsRouteImport.update({
   id: '/trends',
   path: '/trends',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMilestonesRoute = DashboardMilestonesRouteImport.update({
+  id: '/milestones',
+  path: '/milestones',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardDataRoute = DashboardDataRouteImport.update({
@@ -51,14 +63,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/dashboard/data': typeof DashboardDataRoute
+  '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
+  '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard/data': typeof DashboardDataRoute
+  '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
+  '/dashboard/year': typeof DashboardYearRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
@@ -67,7 +83,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/dashboard/data': typeof DashboardDataRoute
+  '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
+  '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
 }
@@ -77,14 +95,18 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/dashboard/data'
+    | '/dashboard/milestones'
     | '/dashboard/trends'
+    | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard/data'
+    | '/dashboard/milestones'
     | '/dashboard/trends'
+    | '/dashboard/year'
     | '/dashboard'
     | '/dashboard/app/$appName'
   id:
@@ -92,7 +114,9 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/dashboard/data'
+    | '/dashboard/milestones'
     | '/dashboard/trends'
+    | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
   fileRoutesById: FileRoutesById
@@ -125,11 +149,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/year': {
+      id: '/dashboard/year'
+      path: '/year'
+      fullPath: '/dashboard/year'
+      preLoaderRoute: typeof DashboardYearRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/trends': {
       id: '/dashboard/trends'
       path: '/trends'
       fullPath: '/dashboard/trends'
       preLoaderRoute: typeof DashboardTrendsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/milestones': {
+      id: '/dashboard/milestones'
+      path: '/milestones'
+      fullPath: '/dashboard/milestones'
+      preLoaderRoute: typeof DashboardMilestonesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/data': {
@@ -151,14 +189,18 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardDataRoute: typeof DashboardDataRoute
+  DashboardMilestonesRoute: typeof DashboardMilestonesRoute
   DashboardTrendsRoute: typeof DashboardTrendsRoute
+  DashboardYearRoute: typeof DashboardYearRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardAppAppNameRoute: typeof DashboardAppAppNameRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDataRoute: DashboardDataRoute,
+  DashboardMilestonesRoute: DashboardMilestonesRoute,
   DashboardTrendsRoute: DashboardTrendsRoute,
+  DashboardYearRoute: DashboardYearRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardAppAppNameRoute: DashboardAppAppNameRoute,
 }
