@@ -155,10 +155,68 @@ function normalizeForMatch(name) {
 }
 
 // ---------------------------------------------------------------------------
-// Sync upi_apps: match / insert, return raw_name → app_id map
+// One-time merge corrections (idempotent):
+// Duplicate upi_apps rows created with wrong canonical names get merged into
+// the correct existing row — raw_names consolidated, FK updated, dupe deleted.
+// ---------------------------------------------------------------------------
+const MERGE_FIXES = [
+  { wrongCanonical: "Slice Small Finance Bank Apps", correctCanonical: "Slice" },
+  { wrongCanonical: "FamApp by Trio #",              correctCanonical: "FamPay" },
+  { wrongCanonical: "Tata Pay #",                    correctCanonical: "Tata Neu" },
+];
+
+async function applyCanonicalFixes() {
+  for (const { wrongCanonical, correctCanonical } of MERGE_FIXES) {
+    // Find the wrong row (dupe)
+    const { data: wrongRow } = await supabase
+      .from("upi_apps")
+      .select("id, raw_names")
+      .eq("canonical_name", wrongCanonical)
+      .maybeSingle();
+
+    if (!wrongRow) continue; // already merged
+
+    // Find the correct target row
+    const { data: correctRow } = await supabase
+      .from("upi_apps")
+      .select("id, raw_names")
+      .eq("canonical_name", correctCanonical)
+      .maybeSingle();
+
+    if (!correctRow) {
+      console.warn(`  ⚠️   Target "${correctCanonical}" not found — skipping merge`);
+      continue;
+    }
+
+    // 1. Re-point upi_monthly_data FK from wrong → correct
+    await supabase
+      .from("upi_monthly_data")
+      .update({ app_id: correctRow.id })
+      .eq("app_id", wrongRow.id);
+
+    // 2. Merge raw_names into the correct row
+    const merged = [...new Set([...(correctRow.raw_names ?? []), ...(wrongRow.raw_names ?? [])])];
+    await supabase
+      .from("upi_apps")
+      .update({ raw_names: merged })
+      .eq("id", correctRow.id);
+
+    // 3. Delete the duplicate row
+    const { error: delErr } = await supabase
+      .from("upi_apps")
+      .delete()
+      .eq("id", wrongRow.id);
+
+    if (delErr) console.warn(`  ⚠️   Could not delete dupe "${wrongCanonical}": ${delErr.message}`);
+    else console.log(`  ✏️   Merged "${wrongCanonical}" → "${correctCanonical}"`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sync upi_apps: match / insert, return { appIdMap, canonicalMap }
 // ---------------------------------------------------------------------------
 async function syncApps(appNamesRaw) {
-  // Load all existing apps
+  // Load all existing apps (after fixes have been applied)
   const { data: existingApps, error } = await supabase
     .from("upi_apps")
     .select("id, canonical_name, raw_names");
@@ -167,6 +225,7 @@ async function syncApps(appNamesRaw) {
 
   // Build lookup tables
   const rawNameToId = new Map();          // exact raw_name → app_id
+  const rawNameToCanonical = new Map();   // exact raw_name → canonical_name
   const normalizedToApp = new Map();      // normalized key → app row
 
   for (const app of existingApps) {
@@ -175,19 +234,22 @@ async function syncApps(appNamesRaw) {
 
     for (const rn of app.raw_names ?? []) {
       rawNameToId.set(rn, app.id);
+      rawNameToCanonical.set(rn, app.canonical_name);
       const rnNorm = normalizeForMatch(rn);
       if (!normalizedToApp.has(rnNorm)) normalizedToApp.set(rnNorm, app);
     }
   }
 
-  const result = new Map(); // app_name_raw → app_id (final)
-  const toAddRawName = [];  // { appId, newRawName } — add raw name to existing app
-  const toInsert = [];      // raw names that need a brand-new upi_apps row
+  const appIdMap = new Map();       // app_name_raw → app_id (final)
+  const canonicalMap = new Map();   // app_name_raw → canonical_name (final)
+  const toAddRawName = [];          // { appId, app, newRawName } — add raw name to existing app
+  const toInsert = [];              // raw names that need a brand-new upi_apps row
 
   for (const rawName of appNamesRaw) {
     // 1. Exact match
     if (rawNameToId.has(rawName)) {
-      result.set(rawName, rawNameToId.get(rawName));
+      appIdMap.set(rawName, rawNameToId.get(rawName));
+      canonicalMap.set(rawName, rawNameToCanonical.get(rawName));
       continue;
     }
 
@@ -195,7 +257,8 @@ async function syncApps(appNamesRaw) {
     const norm = normalizeForMatch(rawName);
     if (normalizedToApp.has(norm)) {
       const app = normalizedToApp.get(norm);
-      result.set(rawName, app.id); // will be confirmed after DB update
+      appIdMap.set(rawName, app.id);
+      canonicalMap.set(rawName, app.canonical_name);
       toAddRawName.push({ appId: app.id, app, newRawName: rawName });
       continue;
     }
@@ -235,7 +298,8 @@ async function syncApps(appNamesRaw) {
       console.error(`  ❌  Failed to insert new apps: ${insErr.message}`);
     } else {
       for (const row of inserted) {
-        result.set(row.raw_names[0], row.id);
+        appIdMap.set(row.raw_names[0], row.id);
+        canonicalMap.set(row.raw_names[0], row.canonical_name);
         console.log(`  🆕  New app  "${row.canonical_name}" (id=${row.id})`);
       }
     }
@@ -245,7 +309,7 @@ async function syncApps(appNamesRaw) {
     console.log("  ✅  No new apps — upi_apps is up to date");
   }
 
-  return result;
+  return { appIdMap, canonicalMap };
 }
 
 // ---------------------------------------------------------------------------
@@ -281,28 +345,34 @@ const rows = Array.from(seen.values()).filter(
 
 console.log(`  Fetched ${rawRows.length} raw rows → ${rows.length} valid rows after dedup/filter\n`);
 
-// ---------------------------------------------------------------------------
-// 1. Save locally to public/data/{year}-{month}.json
-// ---------------------------------------------------------------------------
 const dataDir = resolve(ROOT, "public", "data");
 mkdirSync(dataDir, { recursive: true });
 const localPath = resolve(dataDir, `${year}-${month}.json`);
 
-const localRows = rows.map((r) => ({ ...r, app_name: r.app_name_raw }));
-writeFileSync(localPath, JSON.stringify(localRows, null, 2), "utf8");
-console.log(`  ✅  Saved locally → public/data/${year}-${month}.json`);
+// ---------------------------------------------------------------------------
+// 2. Fix canonical names + sync upi_apps
+// ---------------------------------------------------------------------------
+console.log("  Fixing canonical names …");
+await applyCanonicalFixes();
 
-// ---------------------------------------------------------------------------
-// 2. Sync upi_apps and get raw_name → app_id mapping
-// ---------------------------------------------------------------------------
 console.log("\n  Syncing upi_apps …");
-let appIdMap;
+let appIdMap, canonicalMap;
 try {
-  appIdMap = await syncApps(rows.map((r) => r.app_name_raw));
+  ({ appIdMap, canonicalMap } = await syncApps(rows.map((r) => r.app_name_raw)));
 } catch (err) {
   console.error(`  ❌  ${err.message}`);
   process.exit(1);
 }
+
+// ---------------------------------------------------------------------------
+// 1. Save locally — app_name pulled from Supabase canonical_name
+// ---------------------------------------------------------------------------
+const localRows = rows.map((r) => ({
+  ...r,
+  app_name: canonicalMap.get(r.app_name_raw) ?? r.app_name_raw,
+}));
+writeFileSync(localPath, JSON.stringify(localRows, null, 2), "utf8");
+console.log(`\n  ✅  Saved locally → public/data/${year}-${month}.json`);
 
 // ---------------------------------------------------------------------------
 // 3. Upsert into Supabase upi_monthly_data
