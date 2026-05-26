@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>State of UPI</title>
+    <script>
+      // GitHub Pages SPA routing trick.
+      // When a user navigates directly to a deep path (e.g. /dashboard/trends),
+      // GitHub Pages has no file there and serves this 404.html.
+      // We redirect to the root with the original path encoded as ?p=<path>,
+      // which index.html / main.tsx decodes and restores before the router starts.
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      window.location.replace(
+        "/" +
+          "?p=" +
+          encodeURIComponent(path + search + hash)
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
