@@ -1,7 +1,9 @@
 /**
  * Fetch UPI app-wise monthly data from NPCI and:
  *   1. Save as public/data/{year}-{month}.json  (local cache, same format as existing files)
- *   2. Upsert into Supabase upi_monthly_data table
+ *   2. Sync upi_apps — fuzzy-match new raw names against existing apps;
+ *      add to raw_names[] if matched, insert new row if genuinely new
+ *   3. Upsert into Supabase upi_monthly_data (with app_id FK)
  *
  * Usage:
  *   node scripts/fetch_upi_apps.mjs                     # defaults to Apr 2026
@@ -9,6 +11,7 @@
  *   node scripts/fetch_upi_apps.mjs --year 2025 --month Dec
  *
  * Reads credentials from .env.local (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY).
+ * RLS must be disabled on both upi_apps and upi_monthly_data for the anon key to write.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -138,6 +141,114 @@ function mapRow(r, year, month, month_num) {
 }
 
 // ---------------------------------------------------------------------------
+// Fuzzy-match helpers
+// Strips trailing #, "App"/"Apps", punctuation, whitespace to a bare token
+// so "Google Pay #" and "Google Pay" both normalize to "googlepay".
+// ---------------------------------------------------------------------------
+function normalizeForMatch(name) {
+  return name
+    .toLowerCase()
+    .replace(/#/g, "")            // remove trailing hash (NPCI Apr 2026+ naming)
+    .replace(/\bapps?\b/gi, "")   // remove "App" or "Apps" word
+    .replace(/[^a-z0-9]/g, "")    // strip all non-alphanumeric
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
+// Sync upi_apps: match / insert, return raw_name → app_id map
+// ---------------------------------------------------------------------------
+async function syncApps(appNamesRaw) {
+  // Load all existing apps
+  const { data: existingApps, error } = await supabase
+    .from("upi_apps")
+    .select("id, canonical_name, raw_names");
+
+  if (error) throw new Error(`Failed to fetch upi_apps: ${error.message}`);
+
+  // Build lookup tables
+  const rawNameToId = new Map();          // exact raw_name → app_id
+  const normalizedToApp = new Map();      // normalized key → app row
+
+  for (const app of existingApps) {
+    const norm = normalizeForMatch(app.canonical_name);
+    if (!normalizedToApp.has(norm)) normalizedToApp.set(norm, app);
+
+    for (const rn of app.raw_names ?? []) {
+      rawNameToId.set(rn, app.id);
+      const rnNorm = normalizeForMatch(rn);
+      if (!normalizedToApp.has(rnNorm)) normalizedToApp.set(rnNorm, app);
+    }
+  }
+
+  const result = new Map(); // app_name_raw → app_id (final)
+  const toAddRawName = [];  // { appId, newRawName } — add raw name to existing app
+  const toInsert = [];      // raw names that need a brand-new upi_apps row
+
+  for (const rawName of appNamesRaw) {
+    // 1. Exact match
+    if (rawNameToId.has(rawName)) {
+      result.set(rawName, rawNameToId.get(rawName));
+      continue;
+    }
+
+    // 2. Fuzzy match via normalization
+    const norm = normalizeForMatch(rawName);
+    if (normalizedToApp.has(norm)) {
+      const app = normalizedToApp.get(norm);
+      result.set(rawName, app.id); // will be confirmed after DB update
+      toAddRawName.push({ appId: app.id, app, newRawName: rawName });
+      continue;
+    }
+
+    // 3. Genuinely new app
+    toInsert.push(rawName);
+  }
+
+  // Update existing apps with new raw name variants
+  for (const { appId, app, newRawName } of toAddRawName) {
+    const updatedRawNames = [...new Set([...(app.raw_names ?? []), newRawName])];
+    const { error: updErr } = await supabase
+      .from("upi_apps")
+      .update({ raw_names: updatedRawNames })
+      .eq("id", appId);
+    if (updErr) {
+      console.warn(`  ⚠️   Could not add "${newRawName}" to ${app.canonical_name}: ${updErr.message}`);
+    } else {
+      console.log(`  🔗  Mapped  "${newRawName}" → ${app.canonical_name}`);
+    }
+  }
+
+  // Insert genuinely new apps
+  if (toInsert.length > 0) {
+    const newRows = toInsert.map((name) => ({
+      canonical_name: name,
+      raw_names: [name],
+      logo_domain: null,
+    }));
+
+    const { data: inserted, error: insErr } = await supabase
+      .from("upi_apps")
+      .insert(newRows)
+      .select("id, canonical_name, raw_names");
+
+    if (insErr) {
+      console.error(`  ❌  Failed to insert new apps: ${insErr.message}`);
+    } else {
+      for (const row of inserted) {
+        result.set(row.raw_names[0], row.id);
+        console.log(`  🆕  New app  "${row.canonical_name}" (id=${row.id})`);
+      }
+    }
+  }
+
+  if (toAddRawName.length === 0 && toInsert.length === 0) {
+    console.log("  ✅  No new apps — upi_apps is up to date");
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 const { year, month, month_num } = parseArgs();
@@ -168,7 +279,7 @@ const rows = Array.from(seen.values()).filter(
   (r) => r.cit_volume_mn !== null && r.cit_volume_mn > 0
 );
 
-console.log(`  Fetched ${rawRows.length} raw rows → ${rows.length} valid rows after dedup/filter`);
+console.log(`  Fetched ${rawRows.length} raw rows → ${rows.length} valid rows after dedup/filter\n`);
 
 // ---------------------------------------------------------------------------
 // 1. Save locally to public/data/{year}-{month}.json
@@ -177,27 +288,47 @@ const dataDir = resolve(ROOT, "public", "data");
 mkdirSync(dataDir, { recursive: true });
 const localPath = resolve(dataDir, `${year}-${month}.json`);
 
-// For local JSON, set app_name = app_name_raw (canonical mapping lives in Supabase)
 const localRows = rows.map((r) => ({ ...r, app_name: r.app_name_raw }));
 writeFileSync(localPath, JSON.stringify(localRows, null, 2), "utf8");
 console.log(`  ✅  Saved locally → public/data/${year}-${month}.json`);
 
 // ---------------------------------------------------------------------------
-// 2. Upsert into Supabase upi_monthly_data
+// 2. Sync upi_apps and get raw_name → app_id mapping
 // ---------------------------------------------------------------------------
-const supabaseRows = rows.map(({ app_name_raw, year, month, month_num, cit_volume_mn, cit_value_cr }) => ({
-  app_name_raw, year, month, month_num, cit_volume_mn, cit_value_cr,
-}));
+console.log("\n  Syncing upi_apps …");
+let appIdMap;
+try {
+  appIdMap = await syncApps(rows.map((r) => r.app_name_raw));
+} catch (err) {
+  console.error(`  ❌  ${err.message}`);
+  process.exit(1);
+}
 
-const { error } = await supabase
+// ---------------------------------------------------------------------------
+// 3. Upsert into Supabase upi_monthly_data
+// ---------------------------------------------------------------------------
+console.log("\n  Upserting into upi_monthly_data …");
+
+const supabaseRows = rows
+  .map(({ app_name_raw, year, month, month_num, cit_volume_mn, cit_value_cr }) => {
+    const app_id = appIdMap.get(app_name_raw);
+    if (!app_id) {
+      console.warn(`  ⚠️   Skipping "${app_name_raw}" — no app_id resolved`);
+      return null;
+    }
+    return { app_id, app_name_raw, year, month, month_num, cit_volume_mn, cit_value_cr };
+  })
+  .filter(Boolean);
+
+const { error: upsertError } = await supabase
   .from("upi_monthly_data")
   .upsert(supabaseRows, { onConflict: "year,month,app_name_raw" });
 
-if (error) {
-  console.error(`  ❌  Supabase upsert error: ${error.message}`);
+if (upsertError) {
+  console.error(`  ❌  Supabase upsert error: ${upsertError.message}`);
   process.exit(1);
 } else {
-  console.log(`  ✅  Upserted ${supabaseRows.length} rows into Supabase upi_monthly_data`);
+  console.log(`  ✅  Upserted ${supabaseRows.length} rows into upi_monthly_data`);
 }
 
 console.log(`\nDone. ${month} ${year} data is ready.\n`);
