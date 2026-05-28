@@ -29,7 +29,7 @@ export const Route = createFileRoute("/dashboard")({
 const TABS = [
   { name: "Overview", href: "/dashboard", key: "1" },
   { name: "Trends", href: "/dashboard/trends", key: "2" },
-  { name: "Data", href: "/dashboard/data", key: "3" },
+  { name: "All apps", href: "/dashboard/data", key: "3" },
   { name: "Year Review", href: "/dashboard/year", key: "4" },
 ] as const;
 

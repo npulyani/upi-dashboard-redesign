@@ -10,9 +10,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Scatter,
-  ScatterChart,
-  ZAxis,
   ReferenceLine,
 } from "recharts";
 import { useDashboard } from "@/components/upi/DashboardContext";
@@ -273,34 +270,6 @@ function TrendsPage() {
     return { climbers, fallers };
   }, [current, prev, metric]);
 
-  // Quadrant scatter — share vs YoY growth, bubble = value
-  const quadrant = useMemo(() => {
-    if (!current.length || !twelveAgo.length) return [];
-    const total = totalFor(current, metric);
-    const prevMap = new Map(twelveAgo.map((r) => [r.app_name, r]));
-    return current
-      .map((r) => {
-        const cur = pickMetric(r, metric);
-        const past = prevMap.get(r.app_name);
-        const pastV = past ? pickMetric(past, metric) : 0;
-        if (cur <= 0 || pastV <= 0) return null;
-        const share = total ? (cur / total) * 100 : 0;
-        const yoy = ((cur - pastV) / pastV) * 100;
-        return {
-          app: r.app_name,
-          share,
-          yoy,
-          value: r.cit_value_cr,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null && x.share > 0.05);
-  }, [current, twelveAgo, metric]);
-
-  const quadrantMedianShare = useMemo(() => {
-    if (!quadrant.length) return 0;
-    const sorted = [...quadrant].map((q) => q.share).sort((a, b) => a - b);
-    return sorted[Math.floor(sorted.length / 2)];
-  }, [quadrant]);
 
   return (
     <div className="grid grid-cols-12 gap-5">
@@ -322,6 +291,56 @@ function TrendsPage() {
         <p className="mt-2 font-mono text-sm text-emerald-600">
           {insights ? `+${insights.gainer.pct.toFixed(1)}% MoM` : ""}
         </p>
+      </BentoCard>
+
+      {/* Market share */}
+      <BentoCard className="col-span-12" delay={120}>
+        <CardLabel>Market share · {month} {year}</CardLabel>
+        <h3 className="font-serif text-2xl mt-1 mb-6">Who owns the ecosystem</h3>
+        <div className="w-full h-8 rounded-full overflow-hidden flex bg-foreground/5">
+          {top6Share.map((s, i) => (
+            <div
+              key={s.app}
+              className="h-full flex items-center justify-center text-[10px] font-mono text-white relative group"
+              style={{
+                width: `${s.share}%`,
+                background: SERIES_COLORS[i % SERIES_COLORS.length],
+                minWidth: s.share > 2 ? undefined : 0,
+              }}
+              title={`${s.app} · ${s.share.toFixed(1)}%`}
+            >
+              {s.share > 6 ? `${s.share.toFixed(1)}%` : ""}
+            </div>
+          ))}
+          {otherShare > 0 && (
+            <div
+              className="h-full bg-foreground/30 flex items-center justify-center text-[10px] font-mono text-white"
+              style={{ width: `${otherShare}%` }}
+              title={`Others · ${otherShare.toFixed(1)}%`}
+            >
+              {otherShare > 6 ? `${otherShare.toFixed(1)}%` : ""}
+            </div>
+          )}
+        </div>
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+          {top6Share.map((s, i) => (
+            <span key={s.app} className="flex items-center gap-2 text-xs">
+              <span
+                className="size-2 rounded-sm"
+                style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }}
+              />
+              <span className="font-medium">{s.app}</span>
+              <span className="font-mono text-muted-foreground">{s.share.toFixed(1)}%</span>
+            </span>
+          ))}
+          {otherShare > 0 && (
+            <span className="flex items-center gap-2 text-xs">
+              <span className="size-2 rounded-sm bg-foreground/30" />
+              <span className="font-medium">Others</span>
+              <span className="font-mono text-muted-foreground">{otherShare.toFixed(1)}%</span>
+            </span>
+          )}
+        </div>
       </BentoCard>
 
       {/* Rank movers strip */}
@@ -469,85 +488,25 @@ function TrendsPage() {
         </div>
       </BentoCard>
 
-      {/* Competitive quadrant */}
-      <BentoCard className="col-span-12 min-h-[440px]" delay={310}>
-        <div className="flex items-end justify-between mb-2">
+      {/* Seasonality heatmap */}
+      <BentoCard className="col-span-12" delay={310}>
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <CardLabel>Competitive landscape · YoY growth vs market share</CardLabel>
-            <h3 className="font-serif text-2xl mt-1">Quadrant view</h3>
+            <CardLabel>Seasonality · MoM growth by month</CardLabel>
+            <h3 className="font-serif text-2xl mt-1">The festival effect</h3>
           </div>
-          <div className="hidden md:flex gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span>↗ Leaders</span>
-            <span>↖ Challengers</span>
-            <span>↙ Niche</span>
-            <span>↘ Laggards</span>
-          </div>
+          <select
+            value={seasonalityApp}
+            onChange={(e) => setSeasonalityApp(e.target.value)}
+            className="font-mono text-xs border border-border rounded px-2 py-1.5 bg-background text-foreground"
+          >
+            <option value="__ecosystem__">Ecosystem total</option>
+            {allApps.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
         </div>
-        <div className="h-[360px] w-full text-primary">
-          <ResponsiveContainer>
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 30, left: 10 }}>
-              <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" />
-              <XAxis
-                dataKey="share"
-                type="number"
-                name="Market share"
-                scale="log"
-                domain={["auto", "auto"]}
-                stroke="var(--color-muted-foreground)"
-                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${(v as number).toFixed(v < 1 ? 1 : 0)}%`}
-                label={{ value: "Market share (log)", position: "insideBottom", offset: -10, style: { fontSize: 10, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" } }}
-              />
-              <YAxis
-                dataKey="yoy"
-                type="number"
-                name="YoY growth"
-                stroke="var(--color-muted-foreground)"
-                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${v >= 0 ? "+" : ""}${(v as number).toFixed(0)}%`}
-                width={50}
-              />
-              <ZAxis dataKey="value" range={[60, 800]} name="Value" />
-              <ReferenceLine y={0} stroke="var(--color-border)" />
-              <ReferenceLine x={quadrantMedianShare} stroke="var(--color-border)" strokeDasharray="4 4" />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid var(--color-border)",
-                  background: "var(--color-card)",
-                  fontSize: 12,
-                }}
-                formatter={(v: number, name: string) => {
-                  if (name === "Market share") return [`${(v as number).toFixed(2)}%`, name];
-                  if (name === "YoY growth") return [`${v >= 0 ? "+" : ""}${(v as number).toFixed(1)}%`, name];
-                  if (name === "Value") return [`₹${formatIndianNumber(v as number)} Cr`, name];
-                  return [v, name];
-                }}
-                labelFormatter={() => ""}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const p = payload[0].payload as { app: string; share: number; yoy: number; value: number };
-                  return (
-                    <div className="rounded-xl border border-border bg-card p-3 text-xs shadow-md">
-                      <p className="font-serif text-base mb-1">{p.app}</p>
-                      <p className="font-mono text-muted-foreground">Share: {p.share.toFixed(2)}%</p>
-                      <p className={`font-mono ${p.yoy >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                        YoY: {p.yoy >= 0 ? "+" : ""}{p.yoy.toFixed(1)}%
-                      </p>
-                      <p className="font-mono text-muted-foreground">Value: ₹{formatIndianNumber(p.value)} Cr</p>
-                    </div>
-                  );
-                }}
-              />
-              <Scatter data={quadrant} fill="currentColor" fillOpacity={0.55} stroke="currentColor" strokeWidth={1} />
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
+        <SeasonalityHeatmap matrix={seasonalityMatrix} />
       </BentoCard>
 
       {/* Ticket size */}
@@ -628,57 +587,6 @@ function TrendsPage() {
         </div>
       </BentoCard>
 
-      {/* Market share stacked bar */}
-
-      <BentoCard className="col-span-12 lg:col-span-7 min-h-[260px]" delay={340}>
-        <CardLabel>Market share · {month} {year}</CardLabel>
-        <h3 className="font-serif text-2xl mt-1 mb-6">Who owns the ecosystem</h3>
-        <div className="w-full h-8 rounded-full overflow-hidden flex bg-foreground/5">
-          {top6Share.map((s, i) => (
-            <div
-              key={s.app}
-              className="h-full flex items-center justify-center text-[10px] font-mono text-white relative group"
-              style={{
-                width: `${s.share}%`,
-                background: SERIES_COLORS[i % SERIES_COLORS.length],
-                minWidth: s.share > 2 ? undefined : 0,
-              }}
-              title={`${s.app} · ${s.share.toFixed(1)}%`}
-            >
-              {s.share > 6 ? `${s.share.toFixed(1)}%` : ""}
-            </div>
-          ))}
-          {otherShare > 0 && (
-            <div
-              className="h-full bg-foreground/30 flex items-center justify-center text-[10px] font-mono text-white"
-              style={{ width: `${otherShare}%` }}
-              title={`Others · ${otherShare.toFixed(1)}%`}
-            >
-              {otherShare > 6 ? `${otherShare.toFixed(1)}%` : ""}
-            </div>
-          )}
-        </div>
-        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
-          {top6Share.map((s, i) => (
-            <span key={s.app} className="flex items-center gap-2 text-xs">
-              <span
-                className="size-2 rounded-sm"
-                style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }}
-              />
-              <span className="font-medium">{s.app}</span>
-              <span className="font-mono text-muted-foreground">{s.share.toFixed(1)}%</span>
-            </span>
-          ))}
-          {otherShare > 0 && (
-            <span className="flex items-center gap-2 text-xs">
-              <span className="size-2 rounded-sm bg-foreground/30" />
-              <span className="font-medium">Others</span>
-              <span className="font-mono text-muted-foreground">{otherShare.toFixed(1)}%</span>
-            </span>
-          )}
-        </div>
-      </BentoCard>
-
       {/* State MoM growth */}
       <BentoCard className="col-span-12" delay={500}>
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
@@ -741,29 +649,8 @@ function TrendsPage() {
         )}
       </BentoCard>
 
-      {/* Seasonality heatmap */}
-      <BentoCard className="col-span-12" delay={450}>
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-          <div>
-            <CardLabel>Seasonality · MoM growth by month</CardLabel>
-            <h3 className="font-serif text-2xl mt-1">The festival effect</h3>
-          </div>
-          <select
-            value={seasonalityApp}
-            onChange={(e) => setSeasonalityApp(e.target.value)}
-            className="font-mono text-xs border border-border rounded px-2 py-1.5 bg-background text-foreground"
-          >
-            <option value="__ecosystem__">Ecosystem total</option>
-            {allApps.map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-        </div>
-        <SeasonalityHeatmap matrix={seasonalityMatrix} />
-      </BentoCard>
-
       {/* Period comparison */}
-      <BentoCard className="col-span-12 lg:col-span-5 min-h-[260px]" delay={400}>
+      <BentoCard className="col-span-12" delay={400}>
         <CardLabel>Share · now vs −6m vs −12m</CardLabel>
         <h3 className="font-serif text-2xl mt-1 mb-4">Trajectory check</h3>
         <div className="space-y-3">

@@ -5,9 +5,9 @@ const SHORTCUTS = [
   { keys: ["V"], description: "Toggle Volume / Value metric" },
   { keys: ["1"], description: "Go to Overview" },
   { keys: ["2"], description: "Go to Trends" },
-  { keys: ["3"], description: "Go to Data" },
+  { keys: ["3"], description: "Go to All apps" },
   { keys: ["4"], description: "Go to Year Review" },
-  { keys: ["/"], description: "Focus search (Data page)" },
+  { keys: ["/"], description: "Focus search (All apps page)" },
   { keys: ["?"], description: "Show this help" },
 ];
 
