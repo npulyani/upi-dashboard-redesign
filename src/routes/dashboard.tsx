@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { DashboardProvider, useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle, MonthScrubber } from "@/components/upi/Controls";
+import { analytics } from "@/lib/analytics";
+import type { Metric } from "@/lib/upi/types";
 import { KeyboardShortcutOverlay } from "@/components/upi/KeyboardShortcutOverlay";
 
 export const Route = createFileRoute("/dashboard")({
@@ -43,6 +45,16 @@ function DashboardLayout() {
 
 function Shell() {
   const { year, month, metric, setMonthYear, setMetric, prevMonth, nextMonth } = useDashboard();
+
+  const handleMonthChange = (y: number, m: string) => {
+    analytics.monthChanged(y, m, "scrubber");
+    setMonthYear(y, m);
+  };
+
+  const handleMetricChange = (m: Metric) => {
+    analytics.metricToggled(m);
+    setMetric(m);
+  };
   const pathname = useLocation({ select: (l) => l.pathname });
   const navigate = useNavigate();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -53,9 +65,9 @@ function Shell() {
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-      if (e.key === "ArrowLeft") { e.preventDefault(); prevMonth(); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); nextMonth(); }
-      else if (e.key === "v" || e.key === "V") setMetric(metric === "volume" ? "value" : "volume");
+      if (e.key === "ArrowLeft") { e.preventDefault(); analytics.keyboardShortcutUsed("ArrowLeft", "prev_month"); analytics.monthChanged(year, month, "arrow_left"); prevMonth(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); analytics.keyboardShortcutUsed("ArrowRight", "next_month"); analytics.monthChanged(year, month, "arrow_right"); nextMonth(); }
+      else if (e.key === "v" || e.key === "V") { analytics.keyboardShortcutUsed("v", "toggle_metric"); setMetric(metric === "volume" ? "value" : "volume"); }
       else if (e.key === "1") navigate({ to: "/dashboard" });
       else if (e.key === "2") navigate({ to: "/dashboard/trends" });
       else if (e.key === "3") navigate({ to: "/dashboard/data" });
@@ -115,9 +127,9 @@ function Shell() {
           {/* Controls bar */}
           <div className="mt-6 flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <div className="flex-1">
-              <MonthScrubber year={year} month={month} onChange={setMonthYear} />
+              <MonthScrubber year={year} month={month} onChange={handleMonthChange} />
             </div>
-            <MetricToggle metric={metric} onChange={setMetric} />
+            <MetricToggle metric={metric} onChange={handleMetricChange} />
           </div>
 
           {/* Mobile nav */}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { analytics } from "@/lib/analytics";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Download } from "lucide-react";
 import {
@@ -63,6 +64,10 @@ function AppDeepDive() {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [neighbors, setNeighbors] = useState<{ app: string; rank: number }[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    analytics.appViewed(decoded);
+  }, [decoded]);
 
   useEffect(() => {
     let cancelled = false;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useDeferredValue } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react";
 import { useDashboard } from "@/components/upi/DashboardContext";
@@ -14,6 +14,7 @@ import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { AppMonthData } from "@/lib/upi/types";
+import { analytics } from "@/lib/analytics";
 
 export const Route = createFileRoute("/dashboard/data")({
   head: () => ({
@@ -43,6 +44,7 @@ function DataPage() {
   const [prev, setPrev] = useState<AppMonthData[]>([]);
   const [sparks, setSparks] = useState<Record<string, number[]>>({});
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ function DataPage() {
   }, [current, prev, metric, sparks]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
     const list = q ? rows.filter((r) => r.app_name.toLowerCase().includes(q)) : rows;
     const dir = sortDir === "asc" ? 1 : -1;
     return [...list].sort((a, b) => {
@@ -153,7 +155,7 @@ function DataPage() {
       if (av > bv) return 1 * dir;
       return 0;
     });
-  }, [rows, search, sortKey, sortDir]);
+  }, [rows, deferredSearch, sortKey, sortDir]);
 
   function toggleSort(k: SortKey) {
     if (sortKey === k) {
@@ -165,6 +167,7 @@ function DataPage() {
   }
 
   function exportCsv() {
+    analytics.csvExported(year, month, filtered.length);
     const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)"];
     const lines = [header.join(",")];
     filtered.forEach((r) => {
@@ -198,6 +201,7 @@ function DataPage() {
             <h3 className="font-serif text-3xl mt-1">All providers</h3>
           </div>
           <div className="flex items-center gap-2">
+            {/* Search temporarily disabled — see AppLogo perf fix in refactoring plan
             <div className="flex items-center gap-2 bg-foreground/[0.04] rounded-full px-3 py-2 ring-1 ring-black/5 w-full md:w-64">
               <Search className="size-3.5 text-muted-foreground" />
               <input
@@ -207,6 +211,7 @@ function DataPage() {
                 className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground"
               />
             </div>
+            */}
             <button
               onClick={exportCsv}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"

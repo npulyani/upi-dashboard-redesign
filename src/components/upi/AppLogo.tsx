@@ -6,6 +6,8 @@ import {
   getInitialsColors,
 } from "@/lib/upi/logos";
 
+const srcIdxCache = new Map<string, number>();
+
 type Props = {
   app: string;
   /** Logo domain from DB (upi_apps.logo_domain). Falls back to the logos.ts map, then initials. */
@@ -33,7 +35,8 @@ export function AppLogo({ app, domain: domainProp, size = 28, className, rounded
     ];
   }, [domain]);
 
-  const [srcIdx, setSrcIdx] = useState(0);
+  const cacheKey = domain ?? app;
+  const [srcIdx, setSrcIdx] = useState(() => srcIdxCache.get(cacheKey) ?? 0);
   const failed = srcIdx >= sources.length;
 
   const radius =
@@ -73,7 +76,11 @@ export function AppLogo({ app, domain: domainProp, size = 28, className, rounded
       height={size}
       loading="lazy"
       decoding="async"
-      onError={() => setSrcIdx((i) => i + 1)}
+      onError={() => setSrcIdx((i) => {
+        const next = i + 1;
+        srcIdxCache.set(cacheKey, next);
+        return next;
+      })}
       className={cn(
         radius,
         "shrink-0 object-contain bg-white ring-1 ring-black/5",

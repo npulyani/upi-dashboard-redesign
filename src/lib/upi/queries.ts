@@ -31,7 +31,7 @@ export async function getMonthData(year: number, month: string): Promise<AppMont
 
   if (error || !data) return [];
 
-  const rows: AppMonthData[] = data
+  const mapped: AppMonthData[] = data
     .filter((r) => r.app_name_raw)
     .map((r) => {
       const appInfo = r.upi_apps as unknown as { canonical_name: string; logo_domain?: string | null } | null;
@@ -46,6 +46,21 @@ export async function getMonthData(year: number, month: string): Promise<AppMont
         logo_domain: appInfo?.logo_domain ?? null,
       };
     });
+
+  // Deduplicate: multiple raw names may share the same canonical app_name
+  // (e.g. "KreditBee #" and "Kredit Pe #" both resolve to "KreditBee").
+  // Sum volume + value; keep logo/metadata from the highest-volume entry.
+  const deduped = new Map<string, AppMonthData>();
+  for (const row of mapped) {
+    if (deduped.has(row.app_name)) {
+      const existing = deduped.get(row.app_name)!;
+      existing.cit_volume_mn += row.cit_volume_mn;
+      existing.cit_value_cr  += row.cit_value_cr;
+    } else {
+      deduped.set(row.app_name, { ...row });
+    }
+  }
+  const rows = Array.from(deduped.values());
 
   cache.set(key, rows);
   return rows;

@@ -1,6 +1,7 @@
 import { useRef, useState, cloneElement, ReactElement, isValidElement } from "react";
 import { toPng } from "html-to-image";
 import { toast } from "sonner";
+import { analytics } from "@/lib/analytics";
 
 interface ShareButtonProps {
   /** The element whose ref will be captured for export */
@@ -26,6 +27,7 @@ export function ShareButton({ targetRef, label = "Share" }: ShareButtonProps) {
       try {
         const blob = await (await fetch(dataUrl)).blob();
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        analytics.shareClicked("clipboard", true);
         toast.success("Copied to clipboard");
       } catch {
         // Fallback: download
@@ -33,9 +35,11 @@ export function ShareButton({ targetRef, label = "Share" }: ShareButtonProps) {
         a.href = dataUrl;
         a.download = `upi-insight-${Date.now()}.png`;
         a.click();
+        analytics.shareClicked("download", true);
         toast.success("Downloaded as PNG");
       }
     } catch (err) {
+      analytics.shareClicked("clipboard", false);
       toast.error("Could not capture image");
       console.error(err);
     } finally {
