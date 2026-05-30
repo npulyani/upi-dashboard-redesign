@@ -6,8 +6,6 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -15,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
+import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle } from "@/components/upi/Controls";
 import { AppLink } from "@/components/upi/AppLink";
@@ -29,11 +28,13 @@ import {
 } from "@/lib/upi/queries";
 import {
   avgTicket,
+  buildSeasonalityMatrix,
   cagr,
   pickMetric,
   ranked,
   rankMap,
   totalFor,
+  type SeasonalityCell,
 } from "@/lib/upi/insights";
 import { TrendPoint } from "@/lib/upi/types";
 
@@ -62,6 +63,7 @@ function AppDeepDive() {
   const { metric, setMetric, year, month } = useDashboard();
 
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
   const [neighbors, setNeighbors] = useState<{ app: string; rank: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,6 +104,16 @@ function AppDeepDive() {
         };
       });
       setHistory(pts);
+
+      // Build seasonality matrix for this app from already-fetched data
+      const allForSeasonality = AVAILABLE_MONTHS.map((m, i) => ({
+        year: m.year,
+        month: m.month,
+        month_num: m.month_num,
+        rows: all[i],
+      }));
+      setSeasonalityMatrix(buildSeasonalityMatrix(allForSeasonality, metric, decoded));
+
       setLoading(false);
     })();
     return () => {
@@ -353,51 +365,11 @@ function AppDeepDive() {
           </div>
         </BentoCard>
 
-        {/* Rank timeline */}
-        <BentoCard className="col-span-12 lg:col-span-7 min-h-[300px]" delay={200}>
-          <CardLabel>Rank over time</CardLabel>
-          <h3 className="font-serif text-2xl mt-1 mb-4">Climbing the ladder</h3>
-          <div className="h-[220px] w-full text-primary">
-            <ResponsiveContainer>
-              <LineChart data={history.filter((h) => h.rank !== null)}>
-                <CartesianGrid stroke="var(--color-border)" strokeDasharray="2 4" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  stroke="var(--color-muted-foreground)"
-                  tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={Math.max(0, Math.floor(history.length / 8))}
-                />
-                <YAxis
-                  reversed
-                  stroke="var(--color-muted-foreground)"
-                  tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[1, "dataMax"]}
-                  width={30}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid var(--color-border)",
-                    background: "var(--color-card)",
-                    fontSize: 12,
-                  }}
-                  formatter={(v: number) => [`#${v}`, "Rank"]}
-                />
-                <ReferenceLine
-                  x={selectedPoint?.label}
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.5}
-                />
-                <Line type="stepAfter" dataKey="rank" stroke="currentColor" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Festival effect */}
+        <BentoCard className="col-span-12" delay={200}>
+          <CardLabel>Seasonality · MoM growth by month</CardLabel>
+          <h3 className="font-serif text-2xl mt-1 mb-4">The festival effect</h3>
+          <SeasonalityHeatmap matrix={seasonalityMatrix} />
         </BentoCard>
 
         {/* Neighbors */}
@@ -427,7 +399,7 @@ function AppDeepDive() {
         </BentoCard>
 
         {/* Share trajectory */}
-        <BentoCard className="col-span-12 min-h-[280px]" delay={320}>
+        <BentoCard className="col-span-12 lg:col-span-7 min-h-[280px]" delay={320}>
           <CardLabel>Market share trajectory</CardLabel>
           <h3 className="font-serif text-2xl mt-1 mb-4">Slice of the ecosystem</h3>
           <div className="h-[200px] w-full text-primary">
