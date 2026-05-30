@@ -97,9 +97,9 @@ function Shell() {
                   Live Index · NPCI
                 </span>
               </div>
-              <h1 className="font-serif text-4xl lg:text-5xl leading-none">
+              <Link to="/dashboard" className="font-serif text-4xl lg:text-5xl leading-none hover:opacity-80 transition-opacity">
                 State of <em className="italic">UPI</em>
-              </h1>
+              </Link>
             </div>
             <nav className="hidden md:flex bg-foreground/[0.04] p-1 rounded-full text-sm font-medium ring-1 ring-black/5 overflow-x-auto">
               {TABS.map((t) => {
