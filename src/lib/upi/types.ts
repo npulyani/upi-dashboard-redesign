@@ -26,6 +26,7 @@ export interface TrendPoint {
 }
 
 export type Metric = "volume" | "value";
+export type MapMetric = "volume" | "value" | "txnsPerCapita" | "spendsPerCapita";
 
 export interface StatewiseTrendPoint {
   year: number;
