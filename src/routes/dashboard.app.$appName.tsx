@@ -399,10 +399,10 @@ function AppDeepDive() {
         </BentoCard>
 
         {/* Share trajectory */}
-        <BentoCard className="col-span-12 lg:col-span-7 min-h-[280px]" delay={320}>
+        <BentoCard className="col-span-12 lg:col-span-7" delay={320}>
           <CardLabel>Market share trajectory</CardLabel>
           <h3 className="font-serif text-2xl mt-1 mb-4">Slice of the ecosystem</h3>
-          <div className="h-[200px] w-full text-primary">
+          <div className="h-[160px] w-full text-primary">
             <ResponsiveContainer>
               <AreaChart data={history}>
                 <defs>
