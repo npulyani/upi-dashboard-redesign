@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useDeferredValue } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
@@ -40,6 +40,7 @@ type Row = {
 
 function DataPage() {
   const { year, month, metric } = useDashboard();
+  const navigate = useNavigate();
   const [current, setCurrent] = useState<AppMonthData[]>([]);
   const [prev, setPrev] = useState<AppMonthData[]>([]);
   const [sparks, setSparks] = useState<Record<string, number[]>>({});
@@ -258,14 +259,18 @@ function DataPage() {
                 </tr>
               )}
               {filtered.map((r) => (
-                <tr key={r.app_name} className="hover:bg-foreground/[0.02] transition-colors">
+                <tr
+                  key={r.app_name}
+                  className="hover:bg-foreground/[0.03] transition-colors cursor-pointer group"
+                  onClick={() => navigate({ to: "/dashboard/app/$appName", params: { appName: encodeURIComponent(r.app_name) } })}
+                >
                   <td className="px-6 py-4 font-mono text-xs text-muted-foreground tabular-nums">
                     {String(r.rank).padStart(2, "0")}
                   </td>
                   <td className="px-6 py-4 font-medium">
                     <span className="inline-flex items-center gap-3">
                       <AppLogo app={r.app_name} domain={logoMap.get(r.app_name)} size={26} />
-                      <AppLink app={r.app_name} />
+                      <span className="group-hover:text-primary transition-colors">{r.app_name}</span>
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-mono tabular-nums text-sm">

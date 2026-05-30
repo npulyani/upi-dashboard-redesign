@@ -1,21 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
-import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { StateMap } from "@/components/upi/StateMap";
 import {
+  AVAILABLE_MONTHS,
   getMonthData,
   getPreviousMonth,
-  getAppTrend,
   getStatewiseData,
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
 import { generateNarrative } from "@/lib/upi/insights";
-import { ShareButton } from "@/components/upi/ShareButton";
 import { AppMonthData, StatewiseRow } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -26,10 +24,9 @@ function OverviewPage() {
   const { year, month, metric } = useDashboard();
   const [current, setCurrent] = useState<AppMonthData[]>([]);
   const [previous, setPrevious] = useState<AppMonthData[]>([]);
-  const [leaderTrend, setLeaderTrend] = useState<number[]>([]);
+  const [ecosystemTrend, setEcosystemTrend] = useState<number[]>([]);
   const [stateData, setStateData] = useState<StatewiseRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,16 +43,19 @@ function OverviewPage() {
       setPrevious(prevData);
       setStateData(states);
 
-      const leader = [...cur].sort((a, b) =>
-        metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
-      )[0];
-      if (leader) {
-        const trend = await getAppTrend(leader.app_name, 12, year, month);
-        if (!cancelled) {
-          setLeaderTrend(
-            trend.map((p) => (metric === "volume" ? p.cit_volume_mn : p.cit_value_cr)),
-          );
-        }
+      const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
+      const startIdx = Math.max(0, endIdx - 11);
+      const windowMonths = AVAILABLE_MONTHS.slice(startIdx, endIdx + 1);
+      const monthsData = await Promise.all(windowMonths.map((m) => getMonthData(m.year, m.month)));
+      if (!cancelled) {
+        setEcosystemTrend(
+          monthsData.map((rows) =>
+            rows.reduce(
+              (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
+              0,
+            ),
+          ),
+        );
       }
       setLoading(false);
     })();
@@ -89,11 +89,6 @@ function OverviewPage() {
     [previous, metric],
   );
   const mom = prevTotal ? ((total - prevTotal) / prevTotal) * 100 : 0;
-
-  const leader = sorted[0];
-  const runnerUp = sorted[1];
-  const leaderShare = leader && total ? ((metric === "volume" ? leader.cit_volume_mn : leader.cit_value_cr) / total) * 100 : 0;
-  const runnerShare = runnerUp && total ? ((metric === "volume" ? runnerUp.cit_volume_mn : runnerUp.cit_value_cr) / total) * 100 : 0;
 
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
@@ -171,13 +166,10 @@ function OverviewPage() {
       )}
 
       {/* Hero */}
-      <BentoCard className="col-span-12 min-h-[280px] flex flex-col justify-between" ref={heroRef}>
+      <BentoCard className="col-span-12 min-h-[280px] flex flex-col justify-between">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <CardLabel>Total {metricLabel} — {month} {year}</CardLabel>
-              <ShareButton targetRef={heroRef} label="Share" />
-            </div>
+            <CardLabel>Total {metricLabel} — {month} {year}</CardLabel>
             <h2 className="font-serif text-6xl lg:text-8xl mt-3 leading-[0.9] animate-number">
               {totalDisplay}
             </h2>
@@ -192,11 +184,9 @@ function OverviewPage() {
           </div>
         </div>
         <div className="mt-8">
-          <CardLabel>
-            Leader trajectory · {leader?.app_name ?? "—"} · last 12 months
-          </CardLabel>
+          <CardLabel>UPI trajectory · last 12 months</CardLabel>
           <div className="mt-2 text-primary">
-            <Sparkline values={leaderTrend} height={72} />
+            <Sparkline values={ecosystemTrend} height={72} />
           </div>
         </div>
       </BentoCard>
@@ -206,30 +196,41 @@ function OverviewPage() {
         const value = metric === "volume" ? row.cit_volume_mn : row.cit_value_cr;
         const share = total ? (value / total) * 100 : 0;
         return (
-          <BentoCard
+          <Link
             key={row.app_name}
-            delay={160 + i * 60}
-            className="col-span-12 md:col-span-6 lg:col-span-3 min-h-[180px] flex flex-col justify-between hover:ring-primary/30 transition-shadow"
+            to="/dashboard/app/$appName"
+            params={{ appName: encodeURIComponent(row.app_name) }}
+            className="col-span-12 md:col-span-6 lg:col-span-3"
           >
-            <div className="flex justify-between items-start">
-              <AppLogo app={row.app_name} domain={row.logo_domain} size={40} rounded="lg" />
-              <span className="font-mono text-xs text-muted-foreground">#0{i + 1}</span>
-            </div>
-            <div className="mt-6">
-              <h4 className="font-serif text-2xl"><AppLink app={row.app_name} /></h4>
-              <p className="mt-1 font-mono text-2xl font-medium text-primary tabular-nums">
-                {metric === "volume"
-                  ? `${formatNumber(row.cit_volume_mn * 1e6, 1)}`
-                  : `₹${formatIndianNumber(row.cit_value_cr)} Cr`}
-              </p>
-              <div className="mt-3 h-1 w-full bg-foreground/5 rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${Math.min(100, share)}%` }} />
+            <BentoCard
+              delay={160 + i * 60}
+              className="min-h-[180px] h-full flex flex-col justify-between hover:ring-primary/40 hover:shadow-md cursor-pointer transition-all group"
+            >
+              <div className="flex justify-between items-start">
+                <AppLogo app={row.app_name} domain={row.logo_domain} size={40} rounded="lg" />
+                <span className="font-mono text-xs text-muted-foreground">#0{i + 1}</span>
               </div>
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                {share.toFixed(2)}% share
-              </p>
-            </div>
-          </BentoCard>
+              <div className="mt-6">
+                <h4 className="font-serif text-2xl group-hover:text-primary transition-colors">{row.app_name}</h4>
+                <p className="mt-1 font-mono text-2xl font-medium text-primary tabular-nums">
+                  {metric === "volume"
+                    ? `${formatNumber(row.cit_volume_mn * 1e6, 1)}`
+                    : `₹${formatIndianNumber(row.cit_value_cr)} Cr`}
+                </p>
+                <div className="mt-3 h-1 w-full bg-foreground/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${Math.min(100, share)}%` }} />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    {share.toFixed(2)}% share
+                  </p>
+                  <span className="font-mono text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                    View stats ↗
+                  </span>
+                </div>
+              </div>
+            </BentoCard>
+          </Link>
         );
       })}
 
@@ -302,16 +303,18 @@ function OverviewPage() {
             const max = metric === "volume" ? top10[0].cit_volume_mn : top10[0].cit_value_cr;
             const w = (value / max) * 100;
             return (
-              <li
+              <Link
                 key={row.app_name}
-                className="grid grid-cols-[28px_140px_1fr_auto] items-center gap-4 py-2 border-b border-foreground/[0.04] last:border-0"
+                to="/dashboard/app/$appName"
+                params={{ appName: encodeURIComponent(row.app_name) }}
+                className="grid grid-cols-[28px_140px_1fr_auto] items-center gap-4 py-2 border-b border-foreground/[0.04] last:border-0 hover:bg-foreground/[0.03] rounded-lg px-2 -mx-2 transition-colors cursor-pointer group"
               >
                 <span className="font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="font-medium text-sm truncate inline-flex items-center gap-2.5">
+                <span className="font-medium text-sm truncate inline-flex items-center gap-2.5 group-hover:text-primary transition-colors">
                   <AppLogo app={row.app_name} domain={row.logo_domain} size={22} />
-                  <AppLink app={row.app_name} />
+                  {row.app_name}
                 </span>
                 <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
                   <div
@@ -324,7 +327,7 @@ function OverviewPage() {
                     ? `${row.cit_volume_mn.toFixed(1)}M`
                     : `₹${formatIndianNumber(row.cit_value_cr)}`}
                 </span>
-              </li>
+              </Link>
             );
           })}
         </ol>
