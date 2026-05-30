@@ -51,14 +51,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 // ---------------------------------------------------------------------------
-// Month list: Jan 2021 → Mar 2026 (matches AVAILABLE_MONTHS in queries.ts)
+// Month list: Jan 2021 → Apr 2026 (matches AVAILABLE_MONTHS in queries.ts)
 // ---------------------------------------------------------------------------
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function buildMonthList() {
   const out = [];
   for (let y = 2021; y <= 2026; y++) {
-    const lastMonth = y === 2026 ? 3 : 12;
+    const lastMonth = y === 2026 ? 4 : 12;
     for (let m = 1; m <= lastMonth; m++) {
       out.push({ year: y, month: MONTH_ABBR[m - 1], month_num: m });
     }
