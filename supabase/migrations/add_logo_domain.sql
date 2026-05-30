@@ -60,6 +60,7 @@ UPDATE upi_apps SET logo_domain = CASE canonical_name
   WHEN 'GoIbibo'                      THEN 'goibibo.com'
   WHEN 'PineLabs'                     THEN 'pinelabs.com'
   WHEN 'Niyo Global'                  THEN 'niyo.co'
+  WHEN 'Scapia'                       THEN 'scapia.in'
   -- Banks
   WHEN 'Axis Bank'                    THEN 'axisbank.com'
   WHEN 'Kotak Mahindra Bank'          THEN 'kotak.com'

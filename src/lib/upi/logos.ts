@@ -53,6 +53,7 @@ export const APP_DOMAINS: Record<string, string> = {
   "Ultracash": "ultracash.com",
   "LXME": "lxme.in",
   "ZET": "zet.in",
+  "Scapia": "scapia.in",
 
   // Banks
   "Axis Bank": "axisbank.com",
