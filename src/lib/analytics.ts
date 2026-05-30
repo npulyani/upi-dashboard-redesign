@@ -9,6 +9,7 @@ export function initAnalytics() {
     capture_pageleave: true,
     autocapture: false,
     person_profiles: "never",
+    capture_performance: true,
   });
 }
 
