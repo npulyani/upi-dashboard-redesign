@@ -269,14 +269,14 @@ function OverviewPage() {
       })}
 
       {/* India state map + leaderboard */}
-      <BentoCard className="col-span-12" delay={380}>
-        <div className="flex items-start justify-between gap-4">
+      <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={380}>
+        <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
           <div>
             <CardLabel>UPI by State · {month} {year}</CardLabel>
             <h3 className="font-serif text-2xl mt-1">Geographic distribution</h3>
           </div>
           {/* Map metric toggle */}
-          <div className="flex items-center rounded-lg border border-foreground/10 overflow-hidden text-[10px] font-mono uppercase tracking-wider shrink-0">
+          <div className="flex flex-wrap items-center rounded-lg border border-foreground/10 overflow-hidden text-[10px] font-mono uppercase tracking-wider shrink-0">
             {(["volume", "value", "txnsPerCapita", "spendsPerCapita"] as MapMetric[]).map((m) => (
               <button
                 key={m}
@@ -295,7 +295,7 @@ function OverviewPage() {
 
         {stateLeaderboard.length > 0 ? (
           <>
-            <div className="mt-4 grid grid-cols-[260px_1fr] gap-6">
+            <div className="mt-4 flex-1">
               {/* State leaderboard */}
               <ol className="overflow-y-auto h-[560px] space-y-0.5 pr-1">
                 {stateLeaderboard.map((row, i) => {
@@ -303,31 +303,32 @@ function OverviewPage() {
                   return (
                     <li
                       key={row.name}
-                      className="grid grid-cols-[20px_1fr_52px] items-center gap-2 py-2 border-b border-foreground/[0.04] last:border-0"
+                      className="grid grid-cols-[28px_minmax(110px,180px)_1fr_82px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0"
                     >
                       <span className="font-mono text-[10px] text-muted-foreground leading-none">
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <div className="min-w-0">
-                        <span className="font-medium text-xs truncate block leading-none">
-                          {row.displayName}
-                        </span>
-                        <div className="mt-1.5 h-1 w-full bg-foreground/5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-primary/75"
-                            style={{ width: `${w}%`, transition: "width .5s cubic-bezier(.16,1,.3,1)" }}
-                          />
-                        </div>
+                      <span className="font-medium text-xs truncate leading-none">
+                        {row.displayName}
+                      </span>
+                      <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-primary/75"
+                          style={{
+                            width: `${w}%`,
+                            transition: "width .5s cubic-bezier(.16,1,.3,1)",
+                          }}
+                        />
                       </div>
                       <div className="text-right leading-none">
                         <span className="font-mono text-[10px] text-primary tabular-nums block">
                           {mapMetric === "txnsPerCapita"
                             ? `${(row.tpc ?? 0).toFixed(2)}`
                             : mapMetric === "spendsPerCapita"
-                            ? `₹${(row.spc ?? 0).toFixed(0)}`
-                            : mapMetric === "value"
-                            ? `₹${formatIndianNumber(row.value)}`
-                            : `${row.volume.toFixed(1)}M`}
+                              ? `₹${(row.spc ?? 0).toFixed(0)}`
+                              : mapMetric === "value"
+                                ? `₹${formatIndianNumber(row.value)}`
+                                : `${row.volume.toFixed(1)}M`}
                         </span>
                         <span className="font-mono text-[9px] text-muted-foreground block mt-0.5">
                           {row.shareLabel}
@@ -337,15 +338,19 @@ function OverviewPage() {
                   );
                 })}
               </ol>
-              {/* Map */}
-              <div className="h-[560px]">
+              {/* Map intentionally hidden while keeping the component wired for easy restoration. */}
+              <div className="hidden" aria-hidden="true">
                 <StateMap data={stateData} mapMetric={mapMetric} populations={populations} />
               </div>
             </div>
 
             {/* Per-capita insights — shown only when per-capita mode is active */}
             {(mapMetric === "txnsPerCapita" || mapMetric === "spendsPerCapita") && (
-              <PerCapitaInsights stateData={stateData} populations={populations} mapMetric={mapMetric} />
+              <PerCapitaInsights
+                stateData={stateData}
+                populations={populations}
+                mapMetric={mapMetric}
+              />
             )}
           </>
         ) : (
@@ -356,14 +361,14 @@ function OverviewPage() {
       </BentoCard>
 
       {/* Top 10 ranked list */}
-      <BentoCard className="col-span-12" delay={420}>
+      <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={420}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <CardLabel>Top 10 · {metric === "volume" ? "by volume" : "by value"}</CardLabel>
             <h3 className="font-serif text-2xl mt-1">Leaderboard</h3>
           </div>
         </div>
-        <ol className="space-y-1">
+        <ol className="space-y-1 h-[560px] overflow-y-auto pr-1">
           {top10.map((row, i) => {
             const value = metric === "volume" ? row.cit_volume_mn : row.cit_value_cr;
             const max = metric === "volume" ? top10[0].cit_volume_mn : top10[0].cit_value_cr;
@@ -373,7 +378,7 @@ function OverviewPage() {
                 key={row.app_name}
                 to="/dashboard/app/$appName"
                 params={{ appName: encodeURIComponent(row.app_name) }}
-                className="grid grid-cols-[28px_140px_1fr_auto] items-center gap-4 py-2 border-b border-foreground/[0.04] last:border-0 hover:bg-foreground/[0.03] rounded-lg px-2 -mx-2 transition-colors cursor-pointer group"
+                className="grid grid-cols-[28px_minmax(120px,160px)_1fr_92px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0 hover:bg-foreground/[0.03] rounded-lg px-2 -mx-2 transition-colors cursor-pointer group"
               >
                 <span className="font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
@@ -388,7 +393,7 @@ function OverviewPage() {
                     style={{ width: `${w}%`, transition: "width .6s cubic-bezier(.16,1,.3,1)" }}
                   />
                 </div>
-                <span className="font-mono text-xs tabular-nums text-right w-24">
+                <span className="font-mono text-xs tabular-nums text-right">
                   {metric === "volume"
                     ? `${row.cit_volume_mn.toFixed(1)}M`
                     : `₹${formatIndianNumber(row.cit_value_cr)}`}
