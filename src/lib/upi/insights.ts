@@ -93,6 +93,66 @@ export function decomposeGrowth(
   return { volumeEffect, ticketEffect, total: curVal - prevVal };
 }
 
+/**
+ * Per-app premiumness: value share ÷ volume share.
+ * >1 = the app skews toward high-value transactions; <1 = micro-payments.
+ */
+export function premiumnessIndex(
+  rows: AppMonthData[],
+): { app: string; volumeShare: number; valueShare: number; index: number }[] {
+  const totVol = rows.reduce((a, r) => a + r.cit_volume_mn, 0);
+  const totVal = rows.reduce((a, r) => a + r.cit_value_cr, 0);
+  if (!totVol || !totVal) return [];
+  return rows
+    .filter((r) => r.cit_volume_mn > 0 && r.cit_value_cr > 0)
+    .map((r) => {
+      const volumeShare = (r.cit_volume_mn / totVol) * 100;
+      const valueShare = (r.cit_value_cr / totVal) * 100;
+      return { app: r.app_name, volumeShare, valueShare, index: valueShare / volumeShare };
+    })
+    .sort((a, b) => b.index - a.index);
+}
+
+export interface MarketStructurePoint {
+  year: number;
+  month: string;
+  month_num: number;
+  label: string;
+  hhi: number;
+  top2Share: number;
+  /** Combined share of apps ranked 5 and below — the long tail */
+  tailShare: number;
+}
+
+/** Concentration metrics per month across the full history */
+export function buildMarketStructureSeries(
+  allMonthData: { year: number; month: string; month_num: number; rows: AppMonthData[] }[],
+  metric: Metric,
+): MarketStructurePoint[] {
+  const sorted = [...allMonthData].sort(
+    (a, b) => a.year * 100 + a.month_num - (b.year * 100 + b.month_num),
+  );
+  return sorted
+    .filter((d) => d.rows.length > 0)
+    .map((d) => {
+      const total = totalFor(d.rows, metric);
+      const shares = ranked(d.rows, metric).map((r) =>
+        total ? (pickMetric(r, metric) / total) * 100 : 0,
+      );
+      const top2Share = shares.slice(0, 2).reduce((a, b) => a + b, 0);
+      const top4Share = shares.slice(0, 4).reduce((a, b) => a + b, 0);
+      return {
+        year: d.year,
+        month: d.month,
+        month_num: d.month_num,
+        label: `${d.month} '${String(d.year).slice(2)}`,
+        hhi: computeHHI(d.rows, metric),
+        top2Share,
+        tailShare: Math.max(0, 100 - top4Share),
+      };
+    });
+}
+
 export interface SeasonalityCell {
   year: number;
   month: string;

@@ -65,6 +65,7 @@ function AppDeepDive() {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
   const [neighbors, setNeighbors] = useState<{ app: string; rank: number }[]>([]);
+  const [premium, setPremium] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -163,6 +164,14 @@ function AppDeepDive() {
   useEffect(() => {
     if (!history.length) return;
     getMonthData(year, month).then((rows) => {
+      const totVol = rows.reduce((a, b) => a + b.cit_volume_mn, 0);
+      const totVal = rows.reduce((a, b) => a + b.cit_value_cr, 0);
+      const me = rows.find((r) => r.app_name === decoded);
+      setPremium(
+        me && totVol && totVal && me.cit_volume_mn > 0
+          ? (me.cit_value_cr / totVal) / (me.cit_volume_mn / totVol)
+          : null,
+      );
       const sortedRows = ranked(rows, metric);
       const idx = sortedRows.findIndex((r) => r.app_name === decoded);
       if (idx < 0) { setNeighbors([]); return; }
@@ -265,6 +274,14 @@ function AppDeepDive() {
                 </p>
                 <p className="font-serif text-3xl mt-1">
                   {stats?.latest.share.toFixed(2)}%
+                </p>
+              </div>
+              <div title="Value share ÷ volume share — above 1× skews to high-ticket transactions">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Premium
+                </p>
+                <p className="font-serif text-3xl mt-1">
+                  {premium !== null ? `${premium.toFixed(2)}×` : "—"}
                 </p>
               </div>
             </div>

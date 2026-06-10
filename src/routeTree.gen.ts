@@ -16,6 +16,7 @@ import { Route as DashboardYearRouteImport } from './routes/dashboard.year'
 import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
 import { Route as DashboardMilestonesRouteImport } from './routes/dashboard.milestones'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
+import { Route as DashboardContextRouteImport } from './routes/dashboard.context'
 import { Route as DashboardAppAppNameRouteImport } from './routes/dashboard.app.$appName'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -53,6 +54,11 @@ const DashboardDataRoute = DashboardDataRouteImport.update({
   path: '/data',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardContextRoute = DashboardContextRouteImport.update({
+  id: '/context',
+  path: '/context',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
   id: '/app/$appName',
   path: '/app/$appName',
@@ -62,6 +68,7 @@ const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/trends'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/trends'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/trends'
@@ -177,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDataRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/context': {
+      id: '/dashboard/context'
+      path: '/context'
+      fullPath: '/dashboard/context'
+      preLoaderRoute: typeof DashboardContextRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/app/$appName': {
       id: '/dashboard/app/$appName'
       path: '/app/$appName'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
+  DashboardContextRoute: typeof DashboardContextRoute
   DashboardDataRoute: typeof DashboardDataRoute
   DashboardMilestonesRoute: typeof DashboardMilestonesRoute
   DashboardTrendsRoute: typeof DashboardTrendsRoute
@@ -197,6 +217,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardContextRoute: DashboardContextRoute,
   DashboardDataRoute: DashboardDataRoute,
   DashboardMilestonesRoute: DashboardMilestonesRoute,
   DashboardTrendsRoute: DashboardTrendsRoute,

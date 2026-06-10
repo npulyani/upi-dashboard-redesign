@@ -1,11 +1,11 @@
 import { supabase } from "../supabase";
 import { AppMonthData, MONTH_TO_NUM, NUM_TO_MONTH, StatewiseRow, StatewiseTrendPoint, TrendPoint } from "./types";
 
-// Generate available months: Jan 2021 → Apr 2026 (matches dataset)
+// Generate available months: Jan 2021 → May 2026 (matches dataset)
 function generateAvailableMonths(): { year: number; month: string; month_num: number }[] {
   const out: { year: number; month: string; month_num: number }[] = [];
   for (let y = 2021; y <= 2026; y++) {
-    const lastMonth = y === 2026 ? 4 : 12;
+    const lastMonth = y === 2026 ? 5 : 12;
     for (let m = 1; m <= lastMonth; m++) {
       out.push({ year: y, month: NUM_TO_MONTH[m], month_num: m });
     }
@@ -249,6 +249,69 @@ export async function getUniqueStates(): Promise<string[]> {
   })();
 
   return uniqueStatesCachePromise;
+}
+
+export interface P2PMPoint {
+  year: number;
+  month: string;
+  month_num: number;
+  label: string;
+  total_volume_mn: number;
+  total_value_cr: number;
+  p2p_volume_mn: number;
+  p2p_value_cr: number;
+  p2m_volume_mn: number;
+  p2m_value_cr: number;
+  p2m_volume_pct: number;
+  p2m_value_pct: number;
+  p2p_ticket: number;
+  p2m_ticket: number;
+}
+
+let p2pmCache: P2PMPoint[] | null = null;
+
+export async function getP2PMData(): Promise<P2PMPoint[]> {
+  if (p2pmCache) return p2pmCache;
+
+  const { data, error } = await supabase
+    .from("upi_p2p_p2m")
+    .select("year, month, month_num, total_volume_mn, total_value_cr, p2p_volume_mn, p2p_value_cr, p2m_volume_mn, p2m_value_cr")
+    .order("year", { ascending: true })
+    .order("month_num", { ascending: true });
+
+  if (error || !data || data.length === 0) return [];
+
+  const points: P2PMPoint[] = data.map((r) => {
+    const totVol = Number(r.total_volume_mn);
+    const totVal = Number(r.total_value_cr);
+    const p2pVol = Number(r.p2p_volume_mn);
+    const p2pVal = Number(r.p2p_value_cr);
+    const p2mVol = Number(r.p2m_volume_mn);
+    const p2mVal = Number(r.p2m_value_cr);
+    // Guard against NPCI total anomalies (e.g. Aug '23 total_value_cr is ~10× too low).
+    // Use the max of reported total and sum of components so percentages stay ≤ 100%.
+    const effVol = Math.max(totVol, p2pVol + p2mVol);
+    const effVal = Math.max(totVal, p2pVal + p2mVal);
+    return {
+      year: r.year,
+      month: r.month,
+      month_num: r.month_num,
+      label: `${r.month} '${String(r.year).slice(2)}`,
+      total_volume_mn: totVol,
+      total_value_cr: totVal,
+      p2p_volume_mn: p2pVol,
+      p2p_value_cr: p2pVal,
+      p2m_volume_mn: p2mVol,
+      p2m_value_cr: p2mVal,
+      p2m_volume_pct: effVol > 0 ? (p2mVol / effVol) * 100 : 0,
+      p2m_value_pct: effVal > 0 ? (p2mVal / effVal) * 100 : 0,
+      p2p_ticket: p2pVol > 0 ? (p2pVal / p2pVol) * 10 : 0,
+      p2m_ticket: p2mVol > 0 ? (p2mVal / p2mVol) * 10 : 0,
+    };
+  });
+
+  p2pmCache = points;
+  return points;
 }
 
 export function formatNumber(n: number, digits = 1): string {

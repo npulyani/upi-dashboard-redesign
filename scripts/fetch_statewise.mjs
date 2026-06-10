@@ -1,6 +1,6 @@
 /**
  * Fetches statewise (and district-level) UPI statistics from NPCI for all
- * months Jan 2021 → Mar 2026 and upserts into upi_statewise_data.
+ * months Jan 2021 → May 2026 and upserts into upi_statewise_data.
  *
  * Usage:
  *   node scripts/fetch_statewise.mjs
@@ -50,6 +50,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   realtime: { transport: ws },
 });
 
+const DRY_RUN = process.argv.includes("--dry-run");
+
 // ---------------------------------------------------------------------------
 // Month list: Jan 2021 → Apr 2026 (matches AVAILABLE_MONTHS in queries.ts)
 // ---------------------------------------------------------------------------
@@ -58,7 +60,7 @@ const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct",
 function buildMonthList() {
   const out = [];
   for (let y = 2021; y <= 2026; y++) {
-    const lastMonth = y === 2026 ? 4 : 12;
+    const lastMonth = y === 2026 ? 5 : 12;
     for (let m = 1; m <= lastMonth; m++) {
       out.push({ year: y, month: MONTH_ABBR[m - 1], month_num: m });
     }
@@ -182,16 +184,27 @@ for (const { year, month, month_num } of months) {
     rows = Array.from(seen.values());
   }
 
-  const { error } = await supabase
-    .from("upi_statewise_data")
-    .upsert(rows, { onConflict: "year,month,state_union_territory,district" });
+  const districtLabel = isDistrict ? ` (district-level, ${rows.filter(r => r.district).length} districts + ${rows.filter(r => !r.district).length} totals)` : " (state-level)";
 
-  if (error) {
-    console.error(`UPSERT ERROR: ${error.message}`);
-  } else {
-    const districtLabel = isDistrict ? ` (district-level, ${rows.filter(r => r.district).length} districts + ${rows.filter(r => !r.district).length} totals)` : "";
-    console.log(`${rows.length} rows${districtLabel}`);
+  if (DRY_RUN) {
+    console.log(`[DRY-RUN] ${rows.length} rows${districtLabel} — no DB write`);
+    const stateRows = rows.filter((r) => !r.district);
+    const top = [...stateRows].sort((a, b) => (b.volume_in_mn ?? 0) - (a.volume_in_mn ?? 0)).slice(0, 10);
+    for (const r of top) {
+      console.log(`    ${r.state_union_territory.padEnd(28)} vol ${(r.volume_in_mn ?? 0).toFixed(2)} mn   val ${(r.value_in_cr ?? 0).toFixed(2)} cr`);
+    }
     totalInserted += rows.length;
+  } else {
+    const { error } = await supabase
+      .from("upi_statewise_data")
+      .upsert(rows, { onConflict: "year,month,state_union_territory,district" });
+
+    if (error) {
+      console.error(`UPSERT ERROR: ${error.message}`);
+    } else {
+      console.log(`${rows.length} rows${districtLabel}`);
+      totalInserted += rows.length;
+    }
   }
 
   await new Promise((r) => setTimeout(r, 200));

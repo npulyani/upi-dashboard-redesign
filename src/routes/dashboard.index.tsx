@@ -4,10 +4,13 @@ import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLogo } from "@/components/upi/AppLogo";
+import { AppLink } from "@/components/upi/AppLink";
+import { RankBadge } from "@/components/upi/RankBadge";
 import { StateMap } from "@/components/upi/StateMap";
 import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
 import {
   AVAILABLE_MONTHS,
+  getAllMonthsData,
   getMonthData,
   getPreviousMonth,
   getStatewiseData,
@@ -15,7 +18,8 @@ import {
   formatIndianNumber,
 } from "@/lib/upi/queries";
 import { calcPerCapita, calcSpendsPerCapita, getStatePopulations } from "@/lib/upi/population";
-import { generateNarrative } from "@/lib/upi/insights";
+import { buildSeasonalityMatrix, generateNarrative, rankChanges, SeasonalityCell } from "@/lib/upi/insights";
+import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import { AppMonthData, MapMetric, StatewiseRow } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -30,6 +34,7 @@ function OverviewPage() {
   const [stateData, setStateData] = useState<StatewiseRow[]>([]);
   const [populations, setPopulations] = useState<Map<string, number>>(new Map());
   const [mapMetric, setMapMetric] = useState<MapMetric>("volume");
+  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
 
   const MAP_METRIC_LABELS: Record<MapMetric, string> = {
     volume: "Volume",
@@ -77,6 +82,12 @@ function OverviewPage() {
     };
   }, [year, month, metric]);
 
+  useEffect(() => {
+    getAllMonthsData().then((all) => {
+      setSeasonalityMatrix(buildSeasonalityMatrix(all, metric));
+    });
+  }, [metric]);
+
   const sorted = useMemo(
     () =>
       [...current].sort((a, b) =>
@@ -105,6 +116,19 @@ function OverviewPage() {
 
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
+
+  const logoMap = useMemo(
+    () => new Map(current.map((r) => [r.app_name, r.logo_domain ?? null])),
+    [current],
+  );
+
+  const movers = useMemo(() => {
+    if (!current.length || !previous.length) return { climbers: [], fallers: [] };
+    const ch = rankChanges(current, previous, metric).filter((c) => c.delta !== 0);
+    const climbers = [...ch].sort((a, b) => b.delta - a.delta).slice(0, 3);
+    const fallers = [...ch].sort((a, b) => a.delta - b.delta).slice(0, 3);
+    return { climbers, fallers };
+  }, [current, previous, metric]);
 
   // State leaderboard — driven by mapMetric so it always matches the map view
   const stateLeaderboard = useMemo(() => {
@@ -268,6 +292,48 @@ function OverviewPage() {
         );
       })}
 
+      {/* Rank movers */}
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={300}>
+        <CardLabel>Rank climbers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.climbers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.climbers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </BentoCard>
+      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={340}>
+        <CardLabel>Rank fallers · this month</CardLabel>
+        <ul className="mt-4 space-y-2">
+          {movers.fallers.length === 0 && (
+            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
+          )}
+          {movers.fallers.map((m) => (
+            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
+              <span className="flex items-center gap-3">
+                <RankBadge delta={m.delta} />
+                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
+                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{m.previous} → #{m.current}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </BentoCard>
+
       {/* India state map + leaderboard */}
       <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={380}>
         <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
@@ -403,6 +469,15 @@ function OverviewPage() {
           })}
         </ol>
       </BentoCard>
+
+      {/* Festival effect / seasonality heatmap */}
+      {seasonalityMatrix.length > 0 && (
+        <BentoCard className="col-span-12" delay={460}>
+          <CardLabel>Seasonality · MoM growth by month</CardLabel>
+          <h3 className="font-serif text-2xl mt-1 mb-6">The festival effect</h3>
+          <SeasonalityHeatmap matrix={seasonalityMatrix} />
+        </BentoCard>
+      )}
     </div>
   );
 }

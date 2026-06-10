@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Bar,
   BarChart,
+  Cell as ChartCell,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -17,7 +18,6 @@ import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
-import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import {
   getAllMonthsData,
   getMonthData,
@@ -32,12 +32,20 @@ import {
 } from "@/lib/upi/queries";
 import {
   avgTicket,
+  buildMarketStructureSeries,
   buildSeasonalityMatrix,
   pickMetric,
+  premiumnessIndex,
   rankChanges,
-  SeasonalityCell,
   totalFor,
 } from "@/lib/upi/insights";
+import {
+  EVENT_CATEGORY_COLORS,
+  eventDateDisplay,
+  eventMonthLabel,
+  getMarketEvents,
+  MarketEvent,
+} from "@/lib/upi/events";
 import { AppMonthData, StatewiseTrendPoint } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/trends")({
@@ -71,8 +79,10 @@ function TrendsPage() {
   const [allStates, setAllStates] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string>("MAHARASHTRA");
   const [stateTrend, setStateTrend] = useState<StatewiseTrendPoint[]>([]);
-  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
-  const [seasonalityApp, setSeasonalityApp] = useState<string>("__ecosystem__");
+  const [allMonths, setAllMonths] = useState<
+    { year: number; month: string; month_num: number; rows: AppMonthData[] }[]
+  >([]);
+  const [events, setEvents] = useState<MarketEvent[]>([]);
 
   // Ticket size trend (reuses trendRows which already has volume + value per app)
   const ticketRows = useMemo((): Record<string, number | string>[] => {
@@ -177,18 +187,68 @@ function TrendsPage() {
     return () => { cancelled = true; };
   }, [selectedState]);
 
-  // Load seasonality matrix
+  // Load full history + curated market events once
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const all = await getAllMonthsData();
-      if (cancelled) return;
-      const appArg = seasonalityApp === "__ecosystem__" ? undefined : seasonalityApp;
-      const matrix = buildSeasonalityMatrix(all, metric, appArg);
-      setSeasonalityMatrix(matrix);
-    })();
+    getAllMonthsData().then((all) => { if (!cancelled) setAllMonths(all); });
+    getMarketEvents().then((evts) => { if (!cancelled) setEvents(evts); });
     return () => { cancelled = true; };
-  }, [metric, seasonalityApp]);
+  }, []);
+
+  // Seasonally-adjusted ecosystem MoM: raw MoM minus the average MoM for this
+  // calendar month across all years (the delta_from_avg of the ecosystem matrix)
+  const seasonalAdj = useMemo(() => {
+    if (!allMonths.length) return null;
+    const matrix = buildSeasonalityMatrix(allMonths, metric);
+    for (const row of matrix) {
+      for (const cell of row) {
+        if (cell.year === year && cell.month === month) return cell.delta_from_avg;
+      }
+    }
+    return null;
+  }, [allMonths, metric, year, month]);
+
+  // Concentration metrics over the full history
+  const marketStructure = useMemo(
+    () => (allMonths.length ? buildMarketStructureSeries(allMonths, metric) : []),
+    [allMonths, metric],
+  );
+  const currentStructure = useMemo(() => {
+    return (
+      marketStructure.find((p) => p.year === year && p.month === month) ??
+      marketStructure[marketStructure.length - 1] ??
+      null
+    );
+  }, [marketStructure, year, month]);
+
+  // Premiumness (value share ÷ volume share) for the current month's top-15 apps by volume
+  const premiumness = useMemo(() => {
+    if (!current.length) return [];
+    const top15 = new Set(
+      [...current]
+        .sort((a, b) => b.cit_volume_mn - a.cit_volume_mn)
+        .slice(0, 15)
+        .map((r) => r.app_name),
+    );
+    return premiumnessIndex(current).filter((p) => top15.has(p.app));
+  }, [current]);
+
+  // Events that fall inside the 24-month trajectory window, grouped by chart label
+  const eventsInWindow = useMemo(() => {
+    if (!trendRows.length || !events.length) return [];
+    const labels = new Set(trendRows.map((r) => r.label as string));
+    return events.filter((e) => labels.has(eventMonthLabel(e)));
+  }, [trendRows, events]);
+
+  const eventsByLabel = useMemo(() => {
+    const m = new Map<string, MarketEvent[]>();
+    for (const e of eventsInWindow) {
+      const l = eventMonthLabel(e);
+      if (!m.has(l)) m.set(l, []);
+      m.get(l)!.push(e);
+    }
+    return m;
+  }, [eventsInWindow]);
 
   // Insights
   const insights = useMemo(() => {
@@ -282,6 +342,19 @@ function TrendsPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Aggregate {metric === "volume" ? "volume" : "value"} vs previous month.
         </p>
+        {seasonalAdj !== null && (
+          <p
+            className="mt-2 font-mono text-xs"
+            title={`Raw MoM minus the average MoM for ${month} across all years — strips the festival effect.`}
+          >
+            <span className={seasonalAdj >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              {seasonalAdj >= 0 ? "+" : ""}{seasonalAdj.toFixed(1)} pp
+            </span>{" "}
+            <span className="text-muted-foreground uppercase tracking-widest text-[10px]">
+              seasonally adjusted · vs typical {month}
+            </span>
+          </p>
+        )}
       </BentoCard>
       <BentoCard className="col-span-12 md:col-span-6 min-h-[160px]" delay={80}>
         <CardLabel>Fastest MoM grower</CardLabel>
@@ -471,6 +544,16 @@ function TrendsPage() {
                   name,
                 ]}
               />
+              {Array.from(eventsByLabel.entries()).map(([label, evts]) => (
+                <ReferenceLine
+                  key={label}
+                  x={label}
+                  stroke={EVENT_CATEGORY_COLORS[evts[0].category]}
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.45}
+                  label={<EventMarker events={evts} />}
+                />
+              ))}
               {selected.map((app, i) => (
                 <Line
                   key={app}
@@ -486,27 +569,99 @@ function TrendsPage() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {eventsInWindow.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-foreground/5">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2.5">
+              Market events in this window — hover the markers
+            </p>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+              {eventsInWindow.map((e) => (
+                <li
+                  key={`${e.event_date}-${e.title}`}
+                  className="flex items-baseline gap-2.5 text-xs"
+                  title={`${e.description} (${e.source})`}
+                >
+                  <span
+                    className="size-2 rounded-full shrink-0 self-center"
+                    style={{ background: EVENT_CATEGORY_COLORS[e.category] }}
+                  />
+                  <span className="font-mono text-[10px] text-muted-foreground whitespace-nowrap tabular-nums">
+                    {eventDateDisplay(e)}
+                  </span>
+                  <span className="font-medium leading-snug">{e.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </BentoCard>
 
-      {/* Seasonality heatmap */}
-      <BentoCard className="col-span-12" delay={310}>
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-          <div>
-            <CardLabel>Seasonality · MoM growth by month</CardLabel>
-            <h3 className="font-serif text-2xl mt-1">The festival effect</h3>
-          </div>
-          <select
-            value={seasonalityApp}
-            onChange={(e) => setSeasonalityApp(e.target.value)}
-            className="font-mono text-xs border border-border rounded px-2 py-1.5 bg-background text-foreground"
-          >
-            <option value="__ecosystem__">Ecosystem total</option>
-            {allApps.map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
+      {/* Premiumness index */}
+      <BentoCard className="col-span-12 min-h-[420px]" delay={318}>
+        <div className="mb-4">
+          <CardLabel>Premiumness · value share ÷ volume share</CardLabel>
+          <h3 className="font-serif text-2xl mt-1">Who punches above their weight in value?</h3>
         </div>
-        <SeasonalityHeatmap matrix={seasonalityMatrix} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col justify-between gap-5">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              An index above 1× means an app's share of UPI <em>value</em> exceeds its share of
+              transaction <em>count</em> — it skews toward large-ticket payments. Below 1× means
+              the app lives on micro-transactions. Computed for {month} {year} across the top 15
+              apps by volume.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {premiumness.length > 0 && (
+                <>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Most premium</p>
+                    <p className="font-serif text-2xl mt-1"><AppLink app={premiumness[0].app} /></p>
+                    <p className="font-mono text-sm text-emerald-600 mt-0.5">{premiumness[0].index.toFixed(2)}×</p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Most micro</p>
+                    <p className="font-serif text-2xl mt-1"><AppLink app={premiumness[premiumness.length - 1].app} /></p>
+                    <p className="font-mono text-sm text-rose-600 mt-0.5">{premiumness[premiumness.length - 1].index.toFixed(2)}×</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="h-[340px]">
+            <ResponsiveContainer>
+              <BarChart data={premiumness} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v}×`}
+                />
+                <YAxis
+                  dataKey="app"
+                  type="category"
+                  tick={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={72}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: 12, border: "1px solid var(--color-border)", background: "var(--color-card)", fontSize: 11 }}
+                  formatter={(v: number) => [`${(v as number).toFixed(2)}×`, "Premiumness"]}
+                />
+                <ReferenceLine x={1} stroke="var(--color-muted-foreground)" strokeDasharray="3 3" strokeOpacity={0.5} />
+                <Bar dataKey="index" radius={[0, 4, 4, 0]} fillOpacity={0.75}>
+                  {premiumness.map((p) => (
+                    <ChartCell
+                      key={p.app}
+                      fill={p.index >= 1 ? "var(--color-chart-1)" : "var(--color-chart-3)"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </BentoCard>
 
       {/* Ticket size */}
@@ -670,6 +825,39 @@ function TrendsPage() {
           ))}
         </div>
       </BentoCard>
+    </div>
+  );
+}
+
+/** Hoverable dot rendered at the top of an event ReferenceLine (native SVG tooltip via <title>) */
+function EventMarker({
+  viewBox,
+  events,
+}: {
+  viewBox?: { x?: number; y?: number };
+  events?: MarketEvent[];
+}) {
+  if (!viewBox || viewBox.x === undefined || !events?.length) return null;
+  return (
+    <g transform={`translate(${viewBox.x}, ${(viewBox.y ?? 0) + 6})`} style={{ cursor: "help" }}>
+      <title>{events.map((e) => `${eventDateDisplay(e)} — ${e.title}`).join("\n")}</title>
+      <circle r={10} fill="transparent" />
+      <circle
+        r={4}
+        fill={EVENT_CATEGORY_COLORS[events[0].category]}
+        stroke="var(--color-card)"
+        strokeWidth={1.5}
+      />
+    </g>
+  );
+}
+
+function StructureStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="text-right">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="font-serif text-2xl mt-0.5">{value}</p>
+      <p className="font-mono text-[10px] text-muted-foreground">{sub}</p>
     </div>
   );
 }

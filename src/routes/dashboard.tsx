@@ -33,6 +33,7 @@ const TABS = [
   { name: "Trends", href: "/dashboard/trends", key: "2" },
   { name: "All apps", href: "/dashboard/data", key: "3" },
   { name: "Year Review", href: "/dashboard/year", key: "4" },
+  { name: "Context", href: "/dashboard/context", key: "5" },
 ] as const;
 
 function DashboardLayout() {
@@ -72,6 +73,7 @@ function Shell() {
       else if (e.key === "2") navigate({ to: "/dashboard/trends" });
       else if (e.key === "3") navigate({ to: "/dashboard/data" });
       else if (e.key === "4") navigate({ to: "/dashboard/year" });
+      else if (e.key === "5") navigate({ to: "/dashboard/context" });
       else if (e.key === "?") setShortcutsOpen(true);
       else if (e.key === "/") {
         e.preventDefault();
@@ -129,7 +131,9 @@ function Shell() {
             <div className="flex-1">
               <MonthScrubber year={year} month={month} onChange={handleMonthChange} />
             </div>
-            <MetricToggle metric={metric} onChange={handleMetricChange} />
+            {pathname !== "/dashboard/context" && (
+              <MetricToggle metric={metric} onChange={handleMetricChange} />
+            )}
           </div>
 
           {/* Mobile nav */}
@@ -165,7 +169,7 @@ function Shell() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 flex flex-col gap-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Data: NPCI monthly reports · Jan 2021 — Mar 2026
+              Data: NPCI monthly reports · Jan 2021 — May 2026
             </p>
             <div className="flex items-center gap-4">
               <button

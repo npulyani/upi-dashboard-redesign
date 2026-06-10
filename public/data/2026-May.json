@@ -1,0 +1,821 @@
+[
+  {
+    "app_name_raw": "Phone Pe #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 10734.583524,
+    "cit_value_cr": 1467168.6263014725,
+    "app_name": "PhonePe"
+  },
+  {
+    "app_name_raw": "Google Pay #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 7598.365549,
+    "cit_value_cr": 1002878.3432369679,
+    "app_name": "Google Pay"
+  },
+  {
+    "app_name_raw": "Paytm #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1836.023142,
+    "cit_value_cr": 199103.37155817,
+    "app_name": "Paytm"
+  },
+  {
+    "app_name_raw": "Navi #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 824.109004,
+    "cit_value_cr": 43601.659957471005,
+    "app_name": "Navi"
+  },
+  {
+    "app_name_raw": "super.money #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 418.839503,
+    "cit_value_cr": 19422.72583422099,
+    "app_name": "super.money"
+  },
+  {
+    "app_name_raw": "BHIM",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 227.488752,
+    "cit_value_cr": 26013.586597901,
+    "app_name": "BHIM"
+  },
+  {
+    "app_name_raw": "FamApp by Trio #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 197.320721,
+    "cit_value_cr": 2738.586187596,
+    "app_name": "FamPay"
+  },
+  {
+    "app_name_raw": "Cred #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 157.188434,
+    "cit_value_cr": 61002.43645367887,
+    "app_name": "CRED"
+  },
+  {
+    "app_name_raw": "Whatsapp #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 150.431918,
+    "cit_value_cr": 11425.01586001998,
+    "app_name": "WhatsApp"
+  },
+  {
+    "app_name_raw": "Axis Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 28.125723,
+    "cit_value_cr": 5275.739058288979,
+    "app_name": "Axis Bank"
+  },
+  {
+    "app_name_raw": "Kotak Mahindra Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 121.78993,
+    "cit_value_cr": 14335.850735603977,
+    "app_name": "Kotak Mahindra Bank"
+  },
+  {
+    "app_name_raw": "Amazon Pay #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 87.341759,
+    "cit_value_cr": 10634.560217176975,
+    "app_name": "Amazon Pay"
+  },
+  {
+    "app_name_raw": "Mobikwik #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 81.397143,
+    "cit_value_cr": 9626.566477736971,
+    "app_name": "MobiKwik"
+  },
+  {
+    "app_name_raw": "HDFC Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 35.295712,
+    "cit_value_cr": 12155.762850439969,
+    "app_name": "HDFC Bank"
+  },
+  {
+    "app_name_raw": "Slice Small Finance Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 57.810019,
+    "cit_value_cr": 5157.21196183799,
+    "app_name": "Slice"
+  },
+  {
+    "app_name_raw": "Yes Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.61434,
+    "cit_value_cr": 2614.5016282349884,
+    "app_name": "Yes Bank"
+  },
+  {
+    "app_name_raw": "ICICI Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 24.069103,
+    "cit_value_cr": 7816.69294086599,
+    "app_name": "ICICI Bank"
+  },
+  {
+    "app_name_raw": "IDFC Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 15.338967,
+    "cit_value_cr": 3564.772374073999,
+    "app_name": "IDFC First Bank"
+  },
+  {
+    "app_name_raw": "State Bank of India Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 21.652319,
+    "cit_value_cr": 6022.314622966001,
+    "app_name": "SBI"
+  },
+  {
+    "app_name_raw": "Unity Small Finance Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.061946,
+    "cit_value_cr": 14.740745339999902,
+    "app_name": "Unity Small Finance Bank"
+  },
+  {
+    "app_name_raw": "Airtel Payments Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 16.743409,
+    "cit_value_cr": 1776.7549569479988,
+    "app_name": "Airtel Payments Bank"
+  },
+  {
+    "app_name_raw": "India Post Payments Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 17.764914,
+    "cit_value_cr": 2010.2297611899899,
+    "app_name": "India Post Payments Bank"
+  },
+  {
+    "app_name_raw": "Bajaj Finserv #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 14.9622,
+    "cit_value_cr": 3212.1436267239883,
+    "app_name": "Bajaj Finserv"
+  },
+  {
+    "app_name_raw": "Groww #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 14.137578,
+    "cit_value_cr": 10781.40089032898,
+    "app_name": "Groww"
+  },
+  {
+    "app_name_raw": "Samsung Pay #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 11.07646,
+    "cit_value_cr": 750.274226947999,
+    "app_name": "Samsung Pay"
+  },
+  {
+    "app_name_raw": "KreditBee #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 8.901768,
+    "cit_value_cr": 178.573472875999,
+    "app_name": "KreditBee"
+  },
+  {
+    "app_name_raw": "Federal Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 8.037413,
+    "cit_value_cr": 3182.95744828499,
+    "app_name": "Federal Bank"
+  },
+  {
+    "app_name_raw": "Jio Payments Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 7.206681,
+    "cit_value_cr": 464.11795266100006,
+    "app_name": "Jio Payments Bank"
+  },
+  {
+    "app_name_raw": "POP UPI #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 6.974844,
+    "cit_value_cr": 668.602564814998,
+    "app_name": "POP UPI"
+  },
+  {
+    "app_name_raw": "Jupiter Money #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 5.524462,
+    "cit_value_cr": 943.2792833,
+    "app_name": "Jupiter Money"
+  },
+  {
+    "app_name_raw": "Deutsche Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.029225,
+    "cit_value_cr": 38.1142994659999,
+    "app_name": "Deutsche Bank"
+  },
+  {
+    "app_name_raw": "Jammu and Kashmir Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 4.304738,
+    "cit_value_cr": 585.980942621999,
+    "app_name": "J&K Bank"
+  },
+  {
+    "app_name_raw": "Money View #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.967381,
+    "cit_value_cr": 282.425399549999,
+    "app_name": "Money View"
+  },
+  {
+    "app_name_raw": "Ind Money #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.941475,
+    "cit_value_cr": 1300.042892222998,
+    "app_name": "Ind Money"
+  },
+  {
+    "app_name_raw": "Canara Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.816287,
+    "cit_value_cr": 1091.472164664,
+    "app_name": "Canara Bank"
+  },
+  {
+    "app_name_raw": "RBL Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.533912,
+    "cit_value_cr": 208.27122553499999,
+    "app_name": "RBL Bank"
+  },
+  {
+    "app_name_raw": "Flipkart UPI #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.499134,
+    "cit_value_cr": 148.1330339039989,
+    "app_name": "Flipkart"
+  },
+  {
+    "app_name_raw": "Bharat Pe #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 2.515884,
+    "cit_value_cr": 266.11632405499995,
+    "app_name": "BharatPe"
+  },
+  {
+    "app_name_raw": "Kiwi #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 2.46014,
+    "cit_value_cr": 511.621236263999,
+    "app_name": "Kiwi"
+  },
+  {
+    "app_name_raw": "Suryoday Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.000002,
+    "cit_value_cr": 0.0030501,
+    "app_name": "Suryoday Bank Apps"
+  },
+  {
+    "app_name_raw": "Omni Card",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.914227,
+    "cit_value_cr": 103.32824418999999,
+    "app_name": "OmniCard"
+  },
+  {
+    "app_name_raw": "Punjab National Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.855702,
+    "cit_value_cr": 522.2781035389988,
+    "app_name": "Punjab National Bank"
+  },
+  {
+    "app_name_raw": "Bank of Baroda Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.730816,
+    "cit_value_cr": 480.838001445,
+    "app_name": "Bank of Baroda"
+  },
+  {
+    "app_name_raw": "Indian Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.653741,
+    "cit_value_cr": 417.3196105709989,
+    "app_name": "Indian Bank"
+  },
+  {
+    "app_name_raw": "Standard Chartered Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.124839,
+    "cit_value_cr": 110.165466118999,
+    "app_name": "Standard Chartered Bank"
+  },
+  {
+    "app_name_raw": "HSBC Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.94028,
+    "cit_value_cr": 189.264778573999,
+    "app_name": "HSBC Bank"
+  },
+  {
+    "app_name_raw": "Digikhata",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.579385,
+    "cit_value_cr": 553.338572275999,
+    "app_name": "Digikhata"
+  },
+  {
+    "app_name_raw": "IndusInd Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.555571,
+    "cit_value_cr": 150.17523689700002,
+    "app_name": "IndusInd Bank"
+  },
+  {
+    "app_name_raw": "Jar #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.061668,
+    "cit_value_cr": 31.757022495999998,
+    "app_name": "Jar"
+  },
+  {
+    "app_name_raw": "Timepay #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.024223,
+    "cit_value_cr": 18.0773023759999,
+    "app_name": "Timepay"
+  },
+  {
+    "app_name_raw": "Union Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 1.003275,
+    "cit_value_cr": 310.34132378199956,
+    "app_name": "Union Bank"
+  },
+  {
+    "app_name_raw": "AU Small Finance Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.971003,
+    "cit_value_cr": 303.61756691299894,
+    "app_name": "AU Small Finance Bank"
+  },
+  {
+    "app_name_raw": "South Indian Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.940703,
+    "cit_value_cr": 299.5048435219999,
+    "app_name": "South Indian Bank"
+  },
+  {
+    "app_name_raw": "Aditya Birla Capital Digital #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.912803,
+    "cit_value_cr": 20.365976242000002,
+    "app_name": "Aditya Birla Capital Digital"
+  },
+  {
+    "app_name_raw": "Salary Se #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.838814,
+    "cit_value_cr": 78.8464279369998,
+    "app_name": "Salary Se"
+  },
+  {
+    "app_name_raw": "Kredit Pe #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.800154,
+    "cit_value_cr": 67.7100958289999,
+    "app_name": "KreditBee"
+  },
+  {
+    "app_name_raw": "Freo #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.735431,
+    "cit_value_cr": 86.103687636,
+    "app_name": "Freo"
+  },
+  {
+    "app_name_raw": "Fino Payments Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.715792,
+    "cit_value_cr": 66.56161273999987,
+    "app_name": "Fino Payments Bank"
+  },
+  {
+    "app_name_raw": "UCO Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.641025,
+    "cit_value_cr": 173.060975399999,
+    "app_name": "UCO Bank"
+  },
+  {
+    "app_name_raw": "Shri Ram One #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.582111,
+    "cit_value_cr": 67.35289107,
+    "app_name": "Shriram One"
+  },
+  {
+    "app_name_raw": "Rapipay",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.578954,
+    "cit_value_cr": 33.517362895,
+    "app_name": "RapiPay"
+  },
+  {
+    "app_name_raw": "DBS Digibank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.548671,
+    "cit_value_cr": 186.158664542999,
+    "app_name": "DBS Bank"
+  },
+  {
+    "app_name_raw": "Central Bank of India Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.559588,
+    "cit_value_cr": 195.1704640029989,
+    "app_name": "Central Bank of India"
+  },
+  {
+    "app_name_raw": "One Card #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.546205,
+    "cit_value_cr": 675.7677913069999,
+    "app_name": "OneCard"
+  },
+  {
+    "app_name_raw": "Spice Money",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.456872,
+    "cit_value_cr": 38.684330196,
+    "app_name": "Spice Money"
+  },
+  {
+    "app_name_raw": "Tata Pay #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.358211,
+    "cit_value_cr": 106.916293152,
+    "app_name": "Tata Neu"
+  },
+  {
+    "app_name_raw": "Saathi by PayNearBy #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.311965,
+    "cit_value_cr": 40.0271122109999,
+    "app_name": "Saathi by PayNearBy"
+  },
+  {
+    "app_name_raw": "Bank of India Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.311333,
+    "cit_value_cr": 111.41391670200002,
+    "app_name": "Bank of India"
+  },
+  {
+    "app_name_raw": "Obopay",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.287591,
+    "cit_value_cr": 46.005472793999886,
+    "app_name": "Obopay"
+  },
+  {
+    "app_name_raw": "Karnataka Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.258265,
+    "cit_value_cr": 70.0833677469998,
+    "app_name": "Karnataka Bank"
+  },
+  {
+    "app_name_raw": "NSDL Payments Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.257252,
+    "cit_value_cr": 19.2953169819999,
+    "app_name": "NSDL Payments Bank"
+  },
+  {
+    "app_name_raw": "IDBI Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.241986,
+    "cit_value_cr": 117.73046298,
+    "app_name": "IDBI Bank"
+  },
+  {
+    "app_name_raw": "True Balance",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.20596,
+    "cit_value_cr": 7.5630309,
+    "app_name": "True Balance"
+  },
+  {
+    "app_name_raw": "City Union Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.07507,
+    "cit_value_cr": 32.0385127789999,
+    "app_name": "City Union Bank"
+  },
+  {
+    "app_name_raw": "Scapia #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.163889,
+    "cit_value_cr": 65.9030454009999,
+    "app_name": "Scapia"
+  },
+  {
+    "app_name_raw": "Dhani",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.1598,
+    "cit_value_cr": 7.92995479899999,
+    "app_name": "Dhani"
+  },
+  {
+    "app_name_raw": "Karur Vysya Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.125628,
+    "cit_value_cr": 43.33803218199991,
+    "app_name": "Karur Vysya Bank"
+  },
+  {
+    "app_name_raw": "Tamilnad Mercantile Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.106362,
+    "cit_value_cr": 44.437977235,
+    "app_name": "Tamilnad Mercantile Bank"
+  },
+  {
+    "app_name_raw": "Bank of Maharashtra Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.095745,
+    "cit_value_cr": 35.7211824099999,
+    "app_name": "Bank of Maharashtra"
+  },
+  {
+    "app_name_raw": "Fave #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.081941,
+    "cit_value_cr": 15.205929441,
+    "app_name": "Fave"
+  },
+  {
+    "app_name_raw": "Indian Overseas Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.081032,
+    "cit_value_cr": 28.220322372999995,
+    "app_name": "Indian Overseas Bank"
+  },
+  {
+    "app_name_raw": "Equitas Small Finance Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.078823,
+    "cit_value_cr": 20.98350032099989,
+    "app_name": "Equitas Small Finance Bank"
+  },
+  {
+    "app_name_raw": "Payworld",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.070334,
+    "cit_value_cr": 6.7929355870000006,
+    "app_name": "Payworld"
+  },
+  {
+    "app_name_raw": "Curie Money #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.05999,
+    "cit_value_cr": 4.16541350899999,
+    "app_name": "Curie Money"
+  },
+  {
+    "app_name_raw": "Lxme UPI #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.058857,
+    "cit_value_cr": 5.08755415599999,
+    "app_name": "Lxme UPI #"
+  },
+  {
+    "app_name_raw": "Ultracash #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.047439,
+    "cit_value_cr": 4.151989759,
+    "app_name": "Ultracash"
+  },
+  {
+    "app_name_raw": "Cheq",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.037077,
+    "cit_value_cr": 3.8698717719999998,
+    "app_name": "Cheq"
+  },
+  {
+    "app_name_raw": "Punjab Sind Bank Apps",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.033101,
+    "cit_value_cr": 15.30447249699999,
+    "app_name": "Punjab & Sind Bank"
+  },
+  {
+    "app_name_raw": "ZET #",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.032299,
+    "cit_value_cr": 2.753897835,
+    "app_name": "ZET"
+  },
+  {
+    "app_name_raw": "Rediff",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 0.01972,
+    "cit_value_cr": 5.319893504999989,
+    "app_name": "Rediff"
+  },
+  {
+    "app_name_raw": "Others",
+    "year": 2026,
+    "month": "May",
+    "month_num": 5,
+    "cit_volume_mn": 3.7807820000000003,
+    "cit_value_cr": 316.38880518999946,
+    "app_name": "Others"
+  }
+]

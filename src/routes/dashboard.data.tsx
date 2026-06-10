@@ -26,7 +26,7 @@ export const Route = createFileRoute("/dashboard/data")({
   component: DataPage,
 });
 
-type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket";
+type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket" | "premium";
 type Row = {
   rank: number;
   app_name: string;
@@ -35,6 +35,8 @@ type Row = {
   share: number;
   mom: number | null;
   ticket: number;
+  /** Value share ÷ volume share — >1 skews to high-ticket transactions */
+  premium: number | null;
   sparkline: number[];
 };
 
@@ -95,6 +97,8 @@ function DataPage() {
       (a, b) => a + (metric === "volume" ? b.cit_volume_mn : b.cit_value_cr),
       0,
     );
+    const totVol = current.reduce((a, b) => a + b.cit_volume_mn, 0);
+    const totVal = current.reduce((a, b) => a + b.cit_value_cr, 0);
     const sorted = [...current].sort((a, b) =>
       metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
     );
@@ -110,6 +114,10 @@ function DataPage() {
         share: total ? (cur / total) * 100 : 0,
         mom: past ? ((cur - past) / past) * 100 : null,
         ticket: avgTicket(r),
+        premium:
+          totVol && totVal && r.cit_volume_mn > 0
+            ? (r.cit_value_cr / totVal) / (r.cit_volume_mn / totVol)
+            : null,
         sparkline: sparks[r.app_name] ?? [],
       };
     });
@@ -151,6 +159,10 @@ function DataPage() {
           av = a.ticket;
           bv = b.ticket;
           break;
+        case "premium":
+          av = a.premium ?? -Infinity;
+          bv = b.premium ?? -Infinity;
+          break;
       }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
@@ -169,7 +181,7 @@ function DataPage() {
 
   function exportCsv() {
     analytics.csvExported(year, month, filtered.length);
-    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)"];
+    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)", "Premiumness"];
     const lines = [header.join(",")];
     filtered.forEach((r) => {
       lines.push(
@@ -181,6 +193,7 @@ function DataPage() {
           r.share.toFixed(3),
           r.mom === null ? "" : r.mom.toFixed(3),
           r.ticket.toFixed(2),
+          r.premium === null ? "" : r.premium.toFixed(3),
         ].join(","),
       );
     });
@@ -247,13 +260,16 @@ function DataPage() {
                 <Th onClick={() => toggleSort("ticket")} active={sortKey === "ticket"} dir={sortDir} align="right">
                   Avg ticket
                 </Th>
+                <Th onClick={() => toggleSort("premium")} active={sortKey === "premium"} dir={sortDir} align="right">
+                  <span title="Value share ÷ volume share — above 1× skews to high-ticket transactions">Premium</span>
+                </Th>
                 <th className="px-6 py-4 font-medium text-right">12-mo trend</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-foreground/5">
               {loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
+                  <td colSpan={9} className="py-16 text-center text-xs uppercase tracking-widest font-mono text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
@@ -301,6 +317,15 @@ function DataPage() {
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
                     {r.ticket > 0 ? `₹${formatIndianNumber(r.ticket)}` : "—"}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-xs tabular-nums">
+                    {r.premium === null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <span className={r.premium >= 1 ? "text-foreground" : "text-muted-foreground"}>
+                        {r.premium.toFixed(2)}×
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="w-24 ml-auto text-primary">

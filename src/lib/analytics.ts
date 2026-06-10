@@ -35,4 +35,7 @@ export const analytics = {
   keyboardShortcutUsed(key: string, action: string) {
     posthog.capture("keyboard_shortcut_used", { key, action });
   },
+  contextPageViewed() {
+    posthog.capture("context_page_viewed", {});
+  },
 };

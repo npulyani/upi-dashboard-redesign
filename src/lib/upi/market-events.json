@@ -1,0 +1,162 @@
+[
+  {
+    "event_date": "2021-11-26",
+    "title": "WhatsApp Pay user cap doubled to 40 mn",
+    "description": "NPCI allowed WhatsApp to extend UPI payments from 20 mn to 40 mn registered users in India.",
+    "category": "regulatory",
+    "apps_affected": ["WhatsApp"],
+    "source": "NPCI approval, Nov 2021"
+  },
+  {
+    "event_date": "2022-03-08",
+    "title": "UPI123Pay launched for feature phones",
+    "description": "RBI and NPCI launched UPI123Pay, enabling UPI payments on feature phones without internet access.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "RBI/NPCI launch, Mar 8, 2022"
+  },
+  {
+    "event_date": "2022-04-13",
+    "title": "WhatsApp Pay user cap raised to 100 mn",
+    "description": "NPCI permitted WhatsApp to onboard up to 100 mn UPI users, up from 40 mn.",
+    "category": "regulatory",
+    "apps_affected": ["WhatsApp"],
+    "source": "NPCI approval, Apr 2022"
+  },
+  {
+    "event_date": "2022-09-20",
+    "title": "UPI Lite launched",
+    "description": "NPCI launched UPI Lite at Global Fintech Fest 2022 — an on-device wallet for small-value payments without PIN entry.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "NPCI, Global Fintech Fest, Sep 20, 2022"
+  },
+  {
+    "event_date": "2022-09-20",
+    "title": "RuPay credit cards go live on UPI",
+    "description": "Credit-on-UPI launched: RuPay credit cards could be linked to UPI, adding a credit-funded payment rail that lifts average ticket size.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "RBI/NPCI, Global Fintech Fest, Sep 20, 2022"
+  },
+  {
+    "event_date": "2022-12-02",
+    "title": "NPCI extends 30% market-cap deadline to Dec 2024",
+    "description": "NPCI pushed the deadline for the 30% volume-cap compliance for existing third-party apps (PhonePe, Google Pay) from Dec 2022 to Dec 31, 2024.",
+    "category": "regulatory",
+    "apps_affected": ["PhonePe", "Google Pay"],
+    "source": "NPCI circular, Dec 2, 2022"
+  },
+  {
+    "event_date": "2022-12-23",
+    "title": "PhonePe completes separation from Flipkart",
+    "description": "PhonePe fully separated from the Flipkart group and shifted domicile to India ahead of a major fundraise.",
+    "category": "corporate",
+    "apps_affected": ["PhonePe"],
+    "source": "PhonePe announcement, Dec 2022"
+  },
+  {
+    "event_date": "2023-01-10",
+    "title": "UPI opened to NRIs on international numbers",
+    "description": "NPCI allowed NRE/NRO account holders in ten countries to transact on UPI using international mobile numbers.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "NPCI circular, Jan 10, 2023"
+  },
+  {
+    "event_date": "2023-02-21",
+    "title": "UPI–PayNow cross-border link launched",
+    "description": "India and Singapore linked UPI and PayNow, enabling real-time cross-border remittances between the two systems.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "RBI/MAS launch, Feb 21, 2023"
+  },
+  {
+    "event_date": "2023-04-01",
+    "title": "1.1% interchange on PPI-wallet UPI merchant payments",
+    "description": "NPCI introduced a 1.1% interchange fee on merchant UPI payments above ₹2,000 funded via prepaid wallets, while keeping bank-account UPI free.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "NPCI circular, Mar 24, 2023 (effective Apr 1)"
+  },
+  {
+    "event_date": "2023-09-04",
+    "title": "Pre-sanctioned credit lines enabled on UPI",
+    "description": "RBI allowed banks to offer pre-sanctioned credit lines through UPI, expanding UPI beyond deposit accounts into credit.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "RBI notification, Sep 2023"
+  },
+  {
+    "event_date": "2023-12-08",
+    "title": "UPI limit raised to ₹5 lakh for hospitals and education",
+    "description": "RBI raised the per-transaction UPI limit from ₹1 lakh to ₹5 lakh for payments to hospitals and educational institutions, lifting high-ticket use cases.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "RBI MPC statement, Dec 8, 2023"
+  },
+  {
+    "event_date": "2024-01-31",
+    "title": "RBI bars Paytm Payments Bank",
+    "description": "RBI ordered Paytm Payments Bank to stop accepting deposits and credits, forcing Paytm to migrate its UPI handles to partner banks and triggering a sustained share decline.",
+    "category": "regulatory",
+    "apps_affected": ["Paytm"],
+    "source": "RBI press release, Jan 31, 2024"
+  },
+  {
+    "event_date": "2024-02-02",
+    "title": "UPI goes live in France",
+    "description": "UPI payments went live at the Eiffel Tower via the Lyra partnership — the first UPI merchant acceptance in Europe.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "NPCI International, Feb 2024"
+  },
+  {
+    "event_date": "2024-03-14",
+    "title": "Paytm approved as TPAP with four partner banks",
+    "description": "NPCI approved One97 (Paytm) to operate UPI as a third-party app via Axis, HDFC, SBI and Yes Bank, completing its migration off Paytm Payments Bank.",
+    "category": "regulatory",
+    "apps_affected": ["Paytm"],
+    "source": "NPCI press release, Mar 14, 2024"
+  },
+  {
+    "event_date": "2024-08-28",
+    "title": "UPI Circle (delegated payments) launched",
+    "description": "NPCI launched UPI Circle, letting a primary user delegate full or partial payment authority to trusted secondary users on one bank account.",
+    "category": "product",
+    "apps_affected": [],
+    "source": "NPCI, Global Fintech Fest, Aug 2024"
+  },
+  {
+    "event_date": "2024-12-31",
+    "title": "30% market-cap deadline extended to Dec 2026",
+    "description": "NPCI extended the compliance deadline for the 30% UPI volume cap for existing third-party apps by two more years, to Dec 31, 2026.",
+    "category": "regulatory",
+    "apps_affected": ["PhonePe", "Google Pay"],
+    "source": "NPCI circular, Dec 31, 2024"
+  },
+  {
+    "event_date": "2024-12-31",
+    "title": "WhatsApp Pay user cap removed",
+    "description": "NPCI removed the onboarding cap on WhatsApp Pay entirely, allowing it to extend UPI to its full Indian user base.",
+    "category": "regulatory",
+    "apps_affected": ["WhatsApp"],
+    "source": "NPCI circular, Dec 31, 2024"
+  },
+  {
+    "event_date": "2025-03-19",
+    "title": "₹1,500 cr incentive scheme for low-value P2M UPI",
+    "description": "The Union Cabinet approved an incentive scheme compensating banks for small-value person-to-merchant UPI transactions under the zero-MDR regime for FY 2024-25.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "Union Cabinet, Mar 2025"
+  },
+  {
+    "event_date": "2025-08-01",
+    "title": "NPCI API usage caps take effect",
+    "description": "NPCI limits on non-customer-initiated API calls (balance checks, autopay mandate timing, transaction status checks) took effect to protect UPI infrastructure stability.",
+    "category": "policy",
+    "apps_affected": [],
+    "source": "NPCI circular, May 2025 (effective Aug 1, 2025)"
+  }
+]

@@ -60,6 +60,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   realtime: { transport: ws },
 });
 
+const DRY_RUN = process.argv.includes("--dry-run");
+
 // ---------------------------------------------------------------------------
 // CLI args  (--year 2026 --month Apr)
 // ---------------------------------------------------------------------------
@@ -188,6 +190,11 @@ async function applyCanonicalFixes() {
       continue;
     }
 
+    if (DRY_RUN) {
+      console.log(`  ✏️   (dry-run) would merge "${wrongCanonical}" → "${correctCanonical}"`);
+      continue;
+    }
+
     // 1. Re-point upi_monthly_data FK from wrong → correct
     await supabase
       .from("upi_monthly_data")
@@ -269,6 +276,10 @@ async function syncApps(appNamesRaw) {
 
   // Update existing apps with new raw name variants
   for (const { appId, app, newRawName } of toAddRawName) {
+    if (DRY_RUN) {
+      console.log(`  🔗  (dry-run) would map "${newRawName}" → ${app.canonical_name}`);
+      continue;
+    }
     const updatedRawNames = [...new Set([...(app.raw_names ?? []), newRawName])];
     const { error: updErr } = await supabase
       .from("upi_apps")
@@ -282,7 +293,11 @@ async function syncApps(appNamesRaw) {
   }
 
   // Insert genuinely new apps
-  if (toInsert.length > 0) {
+  if (toInsert.length > 0 && DRY_RUN) {
+    for (const name of toInsert) {
+      console.log(`  🆕  (dry-run) would insert new app "${name}"`);
+    }
+  } else if (toInsert.length > 0) {
     const newRows = toInsert.map((name) => ({
       canonical_name: name,
       raw_names: [name],
@@ -390,15 +405,25 @@ const supabaseRows = rows
   })
   .filter(Boolean);
 
-const { error: upsertError } = await supabase
-  .from("upi_monthly_data")
-  .upsert(supabaseRows, { onConflict: "year,month,app_name_raw" });
-
-if (upsertError) {
-  console.error(`  ❌  Supabase upsert error: ${upsertError.message}`);
-  process.exit(1);
+if (DRY_RUN) {
+  console.log(`  [DRY-RUN] Would upsert ${supabaseRows.length} rows into upi_monthly_data (no DB write)`);
+  const top = [...supabaseRows].sort((a, b) => (b.cit_volume_mn ?? 0) - (a.cit_volume_mn ?? 0)).slice(0, 15);
+  console.log(`\n  Top apps by volume for ${month} ${year}:`);
+  for (const r of top) {
+    const canonical = canonicalMap.get(r.app_name_raw) ?? r.app_name_raw;
+    console.log(`    ${canonical.padEnd(22)} vol ${(r.cit_volume_mn ?? 0).toFixed(2)} mn   val ${(r.cit_value_cr ?? 0).toFixed(2)} cr`);
+  }
 } else {
-  console.log(`  ✅  Upserted ${supabaseRows.length} rows into upi_monthly_data`);
+  const { error: upsertError } = await supabase
+    .from("upi_monthly_data")
+    .upsert(supabaseRows, { onConflict: "year,month,app_name_raw" });
+
+  if (upsertError) {
+    console.error(`  ❌  Supabase upsert error: ${upsertError.message}`);
+    process.exit(1);
+  } else {
+    console.log(`  ✅  Upserted ${supabaseRows.length} rows into upi_monthly_data`);
+  }
 }
 
 console.log(`\nDone. ${month} ${year} data is ready.\n`);
