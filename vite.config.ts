@@ -11,5 +11,8 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
+    // Split each route into its own lazy chunk so Recharts-heavy pages don't
+    // ship in the entry bundle.
+    router: { autoCodeSplitting: true },
   },
 });
