@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
-export function Sparkline({
+// Rendered in loops (up to ~50 table rows) — memo so parent re-renders skip it.
+export const Sparkline = memo(function Sparkline({
   values,
   height = 48,
   color = "currentColor",
@@ -37,4 +38,4 @@ export function Sparkline({
       <path d={d} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
-}
+});

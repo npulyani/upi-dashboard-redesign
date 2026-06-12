@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   getAppDomain,
@@ -25,7 +25,7 @@ type Props = {
  *
  * Domain resolution order: `domain` prop (from DB) → logos.ts map → no logo.
  */
-export function AppLogo({ app, domain: domainProp, size = 28, className, rounded = "md" }: Props) {
+export const AppLogo = memo(function AppLogo({ app, domain: domainProp, size = 28, className, rounded = "md" }: Props) {
   const domain = domainProp ?? getAppDomain(app);
   const sources = useMemo(() => {
     if (!domain) return [] as string[];
@@ -89,4 +89,4 @@ export function AppLogo({ app, domain: domainProp, size = 28, className, rounded
       style={{ width: size, height: size }}
     />
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { MapMetric, StatewiseRow } from "@/lib/upi/types";
 import { calcPerCapita, calcSpendsPerCapita } from "@/lib/upi/population";
 
@@ -16,7 +16,7 @@ function titleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function PerCapitaInsights({ stateData, populations, mapMetric }: PerCapitaInsightsProps) {
+export const PerCapitaInsights = memo(function PerCapitaInsights({ stateData, populations, mapMetric }: PerCapitaInsightsProps) {
   const isTxns = mapMetric === "txnsPerCapita";
 
   const insights = useMemo(() => {
@@ -127,4 +127,4 @@ export function PerCapitaInsights({ stateData, populations, mapMetric }: PerCapi
       </ul>
     </div>
   );
-}
+});

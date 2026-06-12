@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { StatewiseRow, MapMetric } from "@/lib/upi/types";
 import { formatIndianNumber } from "@/lib/upi/queries";
@@ -60,7 +60,7 @@ interface StateMapProps {
   populations?: Map<string, number>;
 }
 
-export function StateMap({ data, mapMetric, populations = new Map() }: StateMapProps) {
+export const StateMap = memo(function StateMap({ data, mapMetric, populations = new Map() }: StateMapProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   // Build lookup: NPCI name → row (handles regular and " Total" suffix months)
@@ -259,4 +259,4 @@ export function StateMap({ data, mapMetric, populations = new Map() }: StateMapP
       )}
     </div>
   );
-}
+});

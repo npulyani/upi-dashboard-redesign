@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { SeasonalityCell } from "@/lib/upi/insights";
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -15,7 +15,7 @@ function cellColor(delta: number | null, mom: number | null): string {
   return "bg-rose-600 text-white";
 }
 
-export function SeasonalityHeatmap({ matrix }: { matrix: SeasonalityCell[][] }) {
+export const SeasonalityHeatmap = memo(function SeasonalityHeatmap({ matrix }: { matrix: SeasonalityCell[][] }) {
   const years = useMemo(() => matrix.map((row) => row[0]?.year).filter(Boolean), [matrix]);
 
   // Compute per-month averages for the footer
@@ -100,4 +100,4 @@ export function SeasonalityHeatmap({ matrix }: { matrix: SeasonalityCell[][] }) 
       </p>
     </div>
   );
-}
+});
