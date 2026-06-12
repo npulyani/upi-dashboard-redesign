@@ -19,22 +19,15 @@ import { MetricToggle } from "@/components/upi/Controls";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankBadge } from "@/components/upi/RankBadge";
-import {
-  AVAILABLE_MONTHS,
-  LATEST_MONTH,
-  formatIndianNumber,
-  formatNumber,
-  getMonthData,
-} from "@/lib/upi/queries";
+import { formatIndianNumber, formatNumber } from "@/lib/upi/queries";
+import { useAllMonths, useMonthData, useSeasonalityMatrix } from "@/lib/upi/hooks";
 import {
   avgTicket,
-  buildSeasonalityMatrix,
   cagr,
   pickMetric,
   ranked,
   rankMap,
   totalFor,
-  type SeasonalityCell,
 } from "@/lib/upi/insights";
 import { TrendPoint } from "@/lib/upi/types";
 
@@ -62,65 +55,46 @@ function AppDeepDive() {
   const decoded = decodeURIComponent(appName);
   const { metric, setMetric, year, month } = useDashboard();
 
-  const [history, setHistory] = useState<HistoryPoint[]>([]);
-  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
-  const [neighbors, setNeighbors] = useState<{ app: string; rank: number }[]>([]);
-  const [premium, setPremium] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     analytics.appViewed(decoded);
   }, [decoded]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      // Fetch every month (cached on repeat visits)
-      const all = await Promise.all(
-        AVAILABLE_MONTHS.map((m) => getMonthData(m.year, m.month)),
-      );
-      if (cancelled) return;
-      const pts: HistoryPoint[] = AVAILABLE_MONTHS.map((m, i) => {
-        const rows = all[i];
-        const r = rows.find((x) => x.app_name === decoded);
-        const totV = totalFor(rows, "volume");
-        const totVa = totalFor(rows, "value");
-        const ranks = rankMap(rows, metric);
-        const share = r
-          ? metric === "volume"
-            ? totV ? (r.cit_volume_mn / totV) * 100 : 0
-            : totVa ? (r.cit_value_cr / totVa) * 100 : 0
-          : 0;
-        return {
-          year: m.year,
-          month: m.month,
-          month_num: m.month_num,
-          label: `${m.month} '${String(m.year).slice(2)}`,
-          cit_volume_mn: r?.cit_volume_mn ?? 0,
-          cit_value_cr: r?.cit_value_cr ?? 0,
-          rank: r ? ranks.get(decoded) ?? null : null,
-          share,
-          ticket: r ? avgTicket(r) : 0,
-        };
-      });
-      setHistory(pts);
+  // Single shared history fetch (was 65 parallel per-month requests)
+  const { allMonths, isPending: loading } = useAllMonths();
+  const seasonalityMatrix = useSeasonalityMatrix(metric, decoded);
 
-      // Build seasonality matrix for this app from already-fetched data
-      const allForSeasonality = AVAILABLE_MONTHS.map((m, i) => ({
-        year: m.year,
-        month: m.month,
-        month_num: m.month_num,
-        rows: all[i],
-      }));
-      setSeasonalityMatrix(buildSeasonalityMatrix(allForSeasonality, metric, decoded));
+  const history = useMemo<HistoryPoint[]>(() => {
+    return allMonths.map((b) => {
+      const r = b.rows.find((x) => x.app_name === decoded);
+      const totV = totalFor(b.rows, "volume");
+      const totVa = totalFor(b.rows, "value");
+      const ranks = rankMap(b.rows, metric);
+      const share = r
+        ? metric === "volume"
+          ? totV ? (r.cit_volume_mn / totV) * 100 : 0
+          : totVa ? (r.cit_value_cr / totVa) * 100 : 0
+        : 0;
+      return {
+        year: b.year,
+        month: b.month,
+        month_num: b.month_num,
+        label: `${b.month} '${String(b.year).slice(2)}`,
+        cit_volume_mn: r?.cit_volume_mn ?? 0,
+        cit_value_cr: r?.cit_value_cr ?? 0,
+        rank: r ? ranks.get(decoded) ?? null : null,
+        share,
+        ticket: r ? avgTicket(r) : 0,
+      };
+    });
+  }, [allMonths, decoded, metric]);
 
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [decoded, metric]);
+  const appDomain = useMemo(
+    () =>
+      allMonths
+        .flatMap((b) => b.rows)
+        .find((x) => x.app_name === decoded)?.logo_domain ?? null,
+    [allMonths, decoded],
+  );
 
   const selectedPoint = useMemo(() => {
     return (
@@ -161,28 +135,28 @@ function AppDeepDive() {
     return { latest: selectedPoint, mom, yoy, cagr3, peak, low, bestStreak: best, curV };
   }, [history, metric, selectedPoint]);
 
-  useEffect(() => {
-    if (!history.length) return;
-    getMonthData(year, month).then((rows) => {
-      const totVol = rows.reduce((a, b) => a + b.cit_volume_mn, 0);
-      const totVal = rows.reduce((a, b) => a + b.cit_value_cr, 0);
-      const me = rows.find((r) => r.app_name === decoded);
-      setPremium(
-        me && totVol && totVal && me.cit_volume_mn > 0
-          ? (me.cit_value_cr / totVal) / (me.cit_volume_mn / totVol)
-          : null,
-      );
-      const sortedRows = ranked(rows, metric);
-      const idx = sortedRows.findIndex((r) => r.app_name === decoded);
-      if (idx < 0) { setNeighbors([]); return; }
-      const around: { app: string; rank: number }[] = [];
-      [-2, -1, 1, 2].forEach((off) => {
-        const t = sortedRows[idx + off];
-        if (t) around.push({ app: t.app_name, rank: idx + off + 1 });
-      });
-      setNeighbors(around);
+  const { rows: monthRows } = useMonthData(year, month);
+
+  const premium = useMemo(() => {
+    const totVol = monthRows.reduce((a, b) => a + b.cit_volume_mn, 0);
+    const totVal = monthRows.reduce((a, b) => a + b.cit_value_cr, 0);
+    const me = monthRows.find((r) => r.app_name === decoded);
+    return me && totVol && totVal && me.cit_volume_mn > 0
+      ? (me.cit_value_cr / totVal) / (me.cit_volume_mn / totVol)
+      : null;
+  }, [monthRows, decoded]);
+
+  const neighbors = useMemo(() => {
+    const sortedRows = ranked(monthRows, metric);
+    const idx = sortedRows.findIndex((r) => r.app_name === decoded);
+    if (idx < 0) return [];
+    const around: { app: string; rank: number; domain: string | null }[] = [];
+    [-2, -1, 1, 2].forEach((off) => {
+      const t = sortedRows[idx + off];
+      if (t) around.push({ app: t.app_name, rank: idx + off + 1, domain: t.logo_domain ?? null });
     });
-  }, [year, month, metric, decoded, history.length]);
+    return around;
+  }, [monthRows, metric, decoded]);
 
   function exportCsv() {
     const header = ["Year", "Month", "Volume (Mn)", "Value (Cr)", "Rank", "Share %", "Avg Ticket (₹)"];
@@ -248,7 +222,7 @@ function AppDeepDive() {
           <div>
             <CardLabel>Provider · {stats?.latest.label}</CardLabel>
             <div className="mt-3 flex items-center gap-5">
-              <AppLogo app={decoded} size={72} rounded="lg" />
+              <AppLogo app={decoded} domain={appDomain} size={72} rounded="lg" />
               <h1 className="font-serif text-5xl lg:text-7xl leading-[0.95]">
                 <em className="italic">{decoded}</em>
               </h1>
@@ -403,7 +377,7 @@ function AppDeepDive() {
                   #{String(n.rank).padStart(2, "0")}
                 </span>
                 <span className="flex-1 font-medium text-sm inline-flex items-center gap-2.5">
-                  <AppLogo app={n.app} size={22} />
+                  <AppLogo app={n.app} domain={n.domain} size={22} />
                   <AppLink app={n.app} />
                 </span>
                 <RankBadge delta={n.rank < (stats?.latest.rank ?? 0) ? 1 : -1} />
@@ -488,6 +462,3 @@ function RecordRow({ label, value, sub }: { label: string; value: string; sub: s
     </div>
   );
 }
-
-// Avoid unused-import warnings
-void LATEST_MONTH;

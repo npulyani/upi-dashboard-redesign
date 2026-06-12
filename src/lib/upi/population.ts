@@ -1,10 +1,7 @@
 import { supabase } from "../supabase";
 
-let populationCache: Map<string, number> | null = null;
-
+// Caching is handled by React Query (populationsQuery in queryOptions.ts).
 export async function getStatePopulations(): Promise<Map<string, number>> {
-  if (populationCache) return populationCache;
-
   const { data, error } = await supabase
     .from("upi_state_population")
     .select("state_union_territory, population_mn");
@@ -14,10 +11,9 @@ export async function getStatePopulations(): Promise<Map<string, number>> {
     return new Map();
   }
 
-  populationCache = new Map(
+  return new Map(
     data.map((r) => [r.state_union_territory as string, Number(r.population_mn)]),
   );
-  return populationCache;
 }
 
 function resolveKey(stateName: string): string {

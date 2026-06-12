@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { MilestoneTimeline } from "@/components/upi/MilestoneTimeline";
-import { getAllMonthsData } from "@/lib/upi/queries";
+import { useAllMonths } from "@/lib/upi/hooks";
 import { extractMilestones, Milestone } from "@/lib/upi/insights";
 
 export const Route = createFileRoute("/dashboard/milestones")({
@@ -15,19 +15,14 @@ export const Route = createFileRoute("/dashboard/milestones")({
 
 function MilestonesPage() {
   const { metric } = useDashboard();
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [filterType, setFilterType] = useState<"all" | Milestone["type"]>("all");
   const [filterApp, setFilterApp] = useState<string>("__all__");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const all = await getAllMonthsData();
-      if (cancelled) return;
-      setMilestones(extractMilestones(all, metric));
-    })();
-    return () => { cancelled = true; };
-  }, [metric]);
+  const { allMonths } = useAllMonths();
+  const milestones = useMemo(
+    () => (allMonths.length ? extractMilestones(allMonths, metric) : []),
+    [allMonths, metric],
+  );
 
   const uniqueApps = useMemo(
     () => Array.from(new Set(milestones.filter((m) => m.app).map((m) => m.app!))).sort(),

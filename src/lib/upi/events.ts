@@ -16,24 +16,22 @@ export interface MarketEvent {
 
 const LOCAL_EVENTS = localEvents as MarketEvent[];
 
-let eventsCache: Promise<MarketEvent[]> | null = null;
-
 /**
  * Curated market events. Reads the market_events table when present so events
  * can be updated between deploys; falls back to the bundled JSON otherwise.
+ * Caching is handled by React Query (eventsQuery in queryOptions.ts).
  */
-export function getMarketEvents(): Promise<MarketEvent[]> {
-  if (!eventsCache) {
-    eventsCache = (async () => {
-      const { data, error } = await supabase
-        .from("market_events")
-        .select("event_date, title, description, category, apps_affected, source")
-        .order("event_date", { ascending: true });
-      if (error || !data?.length) return LOCAL_EVENTS;
-      return data as MarketEvent[];
-    })().catch(() => LOCAL_EVENTS);
+export async function getMarketEvents(): Promise<MarketEvent[]> {
+  try {
+    const { data, error } = await supabase
+      .from("market_events")
+      .select("event_date, title, description, category, apps_affected, source")
+      .order("event_date", { ascending: true });
+    if (error || !data?.length) return LOCAL_EVENTS;
+    return data as MarketEvent[];
+  } catch {
+    return LOCAL_EVENTS;
   }
-  return eventsCache;
 }
 
 /** Chart month label for an event, matching trend rows: "Jan '24" */

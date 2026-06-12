@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { YearCalendar } from "@/components/upi/YearCalendar";
-import { AVAILABLE_MONTHS, getMonthData, formatNumber, formatIndianNumber } from "@/lib/upi/queries";
+import { AVAILABLE_MONTHS, formatNumber, formatIndianNumber } from "@/lib/upi/queries";
+import { useAllMonths } from "@/lib/upi/hooks";
 import { totalFor, ranked } from "@/lib/upi/insights";
 import { AppMonthData } from "@/lib/upi/types";
 
@@ -30,49 +31,26 @@ function YearReviewPage() {
 
   const defaultYear = YEARS.includes(contextYear) ? contextYear : YEARS[YEARS.length - 1];
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
-  const [cells, setCells] = useState<MonthCell[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setCells([]);
-    (async () => {
-      const monthsForYear = AVAILABLE_MONTHS.filter((m) => m.year === selectedYear);
-      const monthsBefore = AVAILABLE_MONTHS.filter(
-        (m) => m.year === selectedYear - 1 || (m.year === selectedYear && m.month_num === 1),
-      );
+  const { allMonths, isPending: loading } = useAllMonths();
 
-      // Fetch all months for the year + previous Dec (for Jan MoM)
-      const allNeeded = Array.from(
-        new Map(
-          [...monthsForYear, ...monthsBefore].map((m) => [`${m.year}-${m.month}`, m]),
-        ).values(),
-      );
-      const fetched = await Promise.all(
-        allNeeded.map(async (m) => ({ key: `${m.year}-${m.month}`, rows: await getMonthData(m.year, m.month) })),
-      );
-      if (cancelled) return;
-
-      const dataMap = new Map(fetched.map((f) => [f.key, f.rows]));
-
-      const result: MonthCell[] = monthsForYear.map((m) => {
-        const prevIdx = AVAILABLE_MONTHS.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
-        const prev = prevIdx >= 0 ? AVAILABLE_MONTHS[prevIdx] : null;
-        return {
-          year: m.year,
-          month: m.month,
-          month_num: m.month_num,
-          current: dataMap.get(`${m.year}-${m.month}`) ?? [],
-          previous: prev ? (dataMap.get(`${prev.year}-${prev.month}`) ?? []) : [],
-        };
-      });
-
-      setCells(result);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [selectedYear]);
+  // Year cells (with previous month for MoM), derived from the shared history
+  const cells = useMemo<MonthCell[]>(() => {
+    if (!allMonths.length) return [];
+    const dataMap = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
+    return AVAILABLE_MONTHS.filter((m) => m.year === selectedYear).map((m) => {
+      const prevIdx =
+        AVAILABLE_MONTHS.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
+      const prev = prevIdx >= 0 ? AVAILABLE_MONTHS[prevIdx] : null;
+      return {
+        year: m.year,
+        month: m.month,
+        month_num: m.month_num,
+        current: dataMap.get(`${m.year}-${m.month_num}`) ?? [],
+        previous: prev ? (dataMap.get(`${prev.year}-${prev.month_num}`) ?? []) : [],
+      };
+    });
+  }, [allMonths, selectedYear]);
 
   // Year summary stats
   const yearStats = useMemo(() => {

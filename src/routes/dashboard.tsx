@@ -3,10 +3,18 @@ import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tansta
 import { DashboardProvider, useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle, MonthScrubber } from "@/components/upi/Controls";
 import { analytics } from "@/lib/analytics";
+import { allMonthsQuery } from "@/lib/upi/queryOptions";
 import type { Metric } from "@/lib/upi/types";
 import { KeyboardShortcutOverlay } from "@/components/upi/KeyboardShortcutOverlay";
 
 export const Route = createFileRoute("/dashboard")({
+  loader: ({ context }) => {
+    // Warm the shared history cache without blocking navigation or SSR.
+    // Client-only: a server-side prefetch would be discarded with the request.
+    if (typeof window !== "undefined") {
+      void context.queryClient.prefetchQuery(allMonthsQuery());
+    }
+  },
   head: () => ({
     meta: [
       { title: "State of UPI — Dashboard" },

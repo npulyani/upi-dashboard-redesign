@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState, useDeferredValue } from "react";
+import { useMemo, useState, useDeferredValue } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import {
-  getMonthData,
+  AVAILABLE_MONTHS,
   getPreviousMonth,
-  getAppTrend,
   formatIndianNumber,
 } from "@/lib/upi/queries";
+import { useAllMonths, useMonthData } from "@/lib/upi/hooks";
 import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
-import { AppMonthData } from "@/lib/upi/types";
 import { analytics } from "@/lib/analytics";
 
 export const Route = createFileRoute("/dashboard/data")({
@@ -43,48 +42,35 @@ type Row = {
 function DataPage() {
   const { year, month, metric } = useDashboard();
   const navigate = useNavigate();
-  const [current, setCurrent] = useState<AppMonthData[]>([]);
-  const [prev, setPrev] = useState<AppMonthData[]>([]);
-  const [sparks, setSparks] = useState<Record<string, number[]>>({});
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      const cur = await getMonthData(year, month);
-      const p = getPreviousMonth(year, month);
-      const pd = p ? await getMonthData(p.year, p.month) : [];
-      if (cancelled) return;
-      setCurrent(cur);
-      setPrev(pd);
-      // Fetch sparklines for top 12 apps only (perf)
-      const top = [...cur]
-        .sort((a, b) =>
-          metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
-        )
-        .slice(0, 12);
-      const trends = await Promise.all(
-        top.map((r) => getAppTrend(r.app_name, 12, year, month)),
-      );
-      if (cancelled) return;
-      const map: Record<string, number[]> = {};
-      top.forEach((r, i) => {
-        map[r.app_name] = trends[i].map((t) =>
-          metric === "volume" ? t.cit_volume_mn : t.cit_value_cr,
-        );
+  const { rows: current, isPending: loading } = useMonthData(year, month);
+  const prevM = getPreviousMonth(year, month);
+  const { rows: prev } = useMonthData(prevM?.year ?? null, prevM?.month ?? null);
+  const { allMonths } = useAllMonths();
+
+  // 12-month sparkline per app, derived from the shared in-memory history —
+  // every row gets one (the old per-app fetch limited this to the top 12).
+  const sparks = useMemo(() => {
+    if (!allMonths.length || !current.length) return {} as Record<string, number[]>;
+    const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
+    if (endIdx < 0) return {} as Record<string, number[]>;
+    const buckets = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
+    const monthMaps = AVAILABLE_MONTHS.slice(Math.max(0, endIdx - 11), endIdx + 1).map(
+      (m) => new Map((buckets.get(`${m.year}-${m.month_num}`) ?? []).map((r) => [r.app_name, r])),
+    );
+    const out: Record<string, number[]> = {};
+    for (const r of current) {
+      out[r.app_name] = monthMaps.map((mm) => {
+        const row = mm.get(r.app_name);
+        return row ? (metric === "volume" ? row.cit_volume_mn : row.cit_value_cr) : 0;
       });
-      setSparks(map);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [year, month, metric]);
+    }
+    return out;
+  }, [allMonths, current, year, month, metric]);
 
   const logoMap = useMemo(
     () => new Map(current.map((r) => [r.app_name, r.logo_domain ?? null])),
@@ -215,7 +201,6 @@ function DataPage() {
             <h3 className="font-serif text-3xl mt-1">All providers</h3>
           </div>
           <div className="flex items-center gap-2">
-            {/* Search temporarily disabled — see AppLogo perf fix in refactoring plan
             <div className="flex items-center gap-2 bg-foreground/[0.04] rounded-full px-3 py-2 ring-1 ring-black/5 w-full md:w-64">
               <Search className="size-3.5 text-muted-foreground" />
               <input
@@ -225,7 +210,6 @@ function DataPage() {
                 className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground"
               />
             </div>
-            */}
             <button
               onClick={exportCsv}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"

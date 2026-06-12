@@ -12,7 +12,9 @@ import {
 } from "recharts";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
-import { getP2PMData, P2PMPoint, formatIndianNumber } from "@/lib/upi/queries";
+import { formatIndianNumber } from "@/lib/upi/queries";
+import { P2PMPoint } from "@/lib/upi/queryOptions";
+import { useP2PM } from "@/lib/upi/hooks";
 import { analytics } from "@/lib/analytics";
 
 export const Route = createFileRoute("/dashboard/context")({
@@ -40,16 +42,12 @@ function everyNthLabel(data: P2PMPoint[], n = 6) {
 
 function ContextPage() {
   const { year, month } = useDashboard();
-  const [data, setData] = useState<P2PMPoint[]>([]);
-  const [loading, setLoading] = useState(true);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("volume");
+
+  const { data, isPending: loading } = useP2PM();
 
   useEffect(() => {
     analytics.contextPageViewed();
-    getP2PMData().then((d) => {
-      setData(d);
-      setLoading(false);
-    });
   }, []);
 
   const current = useMemo(
@@ -370,16 +368,21 @@ function ContextPage() {
 
 // ── Tooltip components ───────────────────────────────────────────────────────
 
+// Prop types mirror what Recharts actually passes (name/value can be loose)
+// so the inline `content` render at the call site typechecks.
 function StackedTooltip({ active, payload, label, metric }: {
   active?: boolean;
-  payload?: { name: string; value: number; color: string }[];
-  label?: string;
+  payload?: readonly { name?: string | number; value?: unknown; color?: string }[];
+  label?: string | number;
   metric?: ChartMetric;
 }) {
   if (!active || !payload?.length) return null;
   const isVol = metric !== "value";
-  const p2m = payload.find((p) => p.name === "P2M");
-  const p2p = payload.find((p) => p.name === "P2P");
+  const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
+  const p2mRaw = payload.find((p) => p.name === "P2M");
+  const p2pRaw = payload.find((p) => p.name === "P2P");
+  const p2m = p2mRaw ? { name: "P2M", value: num(p2mRaw.value), color: p2mRaw.color } : null;
+  const p2p = p2pRaw ? { name: "P2P", value: num(p2pRaw.value), color: p2pRaw.color } : null;
   const total = (p2m?.value ?? 0) + (p2p?.value ?? 0);
 
   const fmt = (v: number) =>

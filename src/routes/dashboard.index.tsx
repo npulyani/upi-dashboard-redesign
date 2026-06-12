@@ -1,92 +1,69 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLogo } from "@/components/upi/AppLogo";
-import { AppLink } from "@/components/upi/AppLink";
-import { RankBadge } from "@/components/upi/RankBadge";
-import { StateMap } from "@/components/upi/StateMap";
+import { RankMovers } from "@/components/upi/RankMovers";
 import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
 import {
   AVAILABLE_MONTHS,
-  getAllMonthsData,
-  getMonthData,
   getPreviousMonth,
-  getStatewiseData,
   formatNumber,
   formatIndianNumber,
 } from "@/lib/upi/queries";
-import { calcPerCapita, calcSpendsPerCapita, getStatePopulations } from "@/lib/upi/population";
-import { buildSeasonalityMatrix, generateNarrative, rankChanges, SeasonalityCell } from "@/lib/upi/insights";
+import {
+  useAllMonths,
+  useMonthData,
+  usePopulations,
+  useSeasonalityMatrix,
+  useStatewise,
+} from "@/lib/upi/hooks";
+import { calcPerCapita, calcSpendsPerCapita } from "@/lib/upi/population";
+import { generateNarrative } from "@/lib/upi/insights";
 import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
-import { AppMonthData, MapMetric, StatewiseRow } from "@/lib/upi/types";
+import { MapMetric } from "@/lib/upi/types";
 
 export const Route = createFileRoute("/dashboard/")({
   component: OverviewPage,
 });
 
+const MAP_METRICS: MapMetric[] = ["volume", "value", "txnsPerCapita", "spendsPerCapita"];
+const MAP_METRIC_LABELS: Record<MapMetric, string> = {
+  volume: "Volume",
+  value: "Value",
+  txnsPerCapita: "Txns per Capita",
+  spendsPerCapita: "Spends per Capita",
+};
+
+const EMPTY_POPULATIONS = new Map<string, number>();
+
 function OverviewPage() {
   const { year, month, metric } = useDashboard();
-  const [current, setCurrent] = useState<AppMonthData[]>([]);
-  const [previous, setPrevious] = useState<AppMonthData[]>([]);
-  const [ecosystemTrend, setEcosystemTrend] = useState<number[]>([]);
-  const [stateData, setStateData] = useState<StatewiseRow[]>([]);
-  const [populations, setPopulations] = useState<Map<string, number>>(new Map());
   const [mapMetric, setMapMetric] = useState<MapMetric>("volume");
-  const [seasonalityMatrix, setSeasonalityMatrix] = useState<SeasonalityCell[][]>([]);
 
-  const MAP_METRIC_LABELS: Record<MapMetric, string> = {
-    volume: "Volume",
-    value: "Value",
-    txnsPerCapita: "Txns per Capita",
-    spendsPerCapita: "Spends per Capita",
-  };
-  const [loading, setLoading] = useState(true);
+  const { rows: current, isPending: loading } = useMonthData(year, month);
+  const prevM = getPreviousMonth(year, month);
+  const { rows: previous } = useMonthData(prevM?.year ?? null, prevM?.month ?? null);
+  const stateData = useStatewise(year, month);
+  const populations = usePopulations() ?? EMPTY_POPULATIONS;
+  const { allMonths } = useAllMonths();
+  const seasonalityMatrix = useSeasonalityMatrix(metric);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      const [cur, states, pops] = await Promise.all([
-        getMonthData(year, month),
-        getStatewiseData(year, month),
-        getStatePopulations(),
-      ]);
-      const prev = getPreviousMonth(year, month);
-      const prevData = prev ? await getMonthData(prev.year, prev.month) : [];
-      if (cancelled) return;
-      setCurrent(cur);
-      setPrevious(prevData);
-      setStateData(states);
-      setPopulations(pops);
-
-      const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
-      const startIdx = Math.max(0, endIdx - 11);
-      const windowMonths = AVAILABLE_MONTHS.slice(startIdx, endIdx + 1);
-      const monthsData = await Promise.all(windowMonths.map((m) => getMonthData(m.year, m.month)));
-      if (!cancelled) {
-        setEcosystemTrend(
-          monthsData.map((rows) =>
-            rows.reduce(
-              (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
-              0,
-            ),
-          ),
-        );
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [year, month, metric]);
-
-  useEffect(() => {
-    getAllMonthsData().then((all) => {
-      setSeasonalityMatrix(buildSeasonalityMatrix(all, metric));
-    });
-  }, [metric]);
+  // Last-12-months ecosystem total, derived from the shared history
+  const ecosystemTrend = useMemo(() => {
+    if (!allMonths.length) return [];
+    const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
+    if (endIdx < 0) return [];
+    const startIdx = Math.max(0, endIdx - 11);
+    const buckets = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
+    return AVAILABLE_MONTHS.slice(startIdx, endIdx + 1).map((m) =>
+      (buckets.get(`${m.year}-${m.month_num}`) ?? []).reduce(
+        (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
+        0,
+      ),
+    );
+  }, [allMonths, year, month, metric]);
 
   const sorted = useMemo(
     () =>
@@ -116,19 +93,6 @@ function OverviewPage() {
 
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
-
-  const logoMap = useMemo(
-    () => new Map(current.map((r) => [r.app_name, r.logo_domain ?? null])),
-    [current],
-  );
-
-  const movers = useMemo(() => {
-    if (!current.length || !previous.length) return { climbers: [], fallers: [] };
-    const ch = rankChanges(current, previous, metric).filter((c) => c.delta !== 0);
-    const climbers = [...ch].sort((a, b) => b.delta - a.delta).slice(0, 3);
-    const fallers = [...ch].sort((a, b) => a.delta - b.delta).slice(0, 3);
-    return { climbers, fallers };
-  }, [current, previous, metric]);
 
   // State leaderboard — driven by mapMetric so it always matches the map view
   const stateLeaderboard = useMemo(() => {
@@ -185,6 +149,11 @@ function OverviewPage() {
       .sort((a, b) => b.metricValue - a.metricValue);
   }, [stateData, metric, mapMetric, populations]);
 
+  const narrative = useMemo(
+    () => generateNarrative(month, year, current, previous, metric, stateLeaderboard.slice(0, 2)),
+    [month, year, current, previous, metric, stateLeaderboard],
+  );
+
   if (loading && current.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground font-mono text-xs uppercase tracking-widest">
@@ -198,8 +167,6 @@ function OverviewPage() {
     metric === "volume"
       ? `${(total / 1000).toFixed(2)}B`
       : `₹${(total / 100000).toFixed(2)}L Cr`;
-
-  const narrative = generateNarrative(month, year, current, previous, metric, stateLeaderboard.slice(0, 2));
 
   const top2Share =
     (((sorted[0]?.cit_volume_mn ?? 0) + (sorted[1]?.cit_volume_mn ?? 0)) /
@@ -293,46 +260,7 @@ function OverviewPage() {
       })}
 
       {/* Rank movers */}
-      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={300}>
-        <CardLabel>Rank climbers · this month</CardLabel>
-        <ul className="mt-4 space-y-2">
-          {movers.climbers.length === 0 && (
-            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
-          )}
-          {movers.climbers.map((m) => (
-            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
-              <span className="flex items-center gap-3">
-                <RankBadge delta={m.delta} />
-                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
-                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                #{m.previous} → #{m.current}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </BentoCard>
-      <BentoCard className="col-span-12 md:col-span-6 min-h-[180px]" delay={340}>
-        <CardLabel>Rank fallers · this month</CardLabel>
-        <ul className="mt-4 space-y-2">
-          {movers.fallers.length === 0 && (
-            <li className="text-sm text-muted-foreground">No rank changes yet.</li>
-          )}
-          {movers.fallers.map((m) => (
-            <li key={m.app} className="flex items-center justify-between gap-3 py-1.5 border-b border-foreground/[0.04] last:border-0">
-              <span className="flex items-center gap-3">
-                <RankBadge delta={m.delta} />
-                <AppLogo app={m.app} domain={logoMap.get(m.app)} size={22} />
-                <span className="font-medium text-sm"><AppLink app={m.app} /></span>
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                #{m.previous} → #{m.current}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </BentoCard>
+      <RankMovers current={current} previous={previous} metric={metric} delays={[300, 340]} />
 
       {/* India state map + leaderboard */}
       <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={380}>
@@ -343,7 +271,7 @@ function OverviewPage() {
           </div>
           {/* Map metric toggle */}
           <div className="flex flex-wrap items-center rounded-lg border border-foreground/10 overflow-hidden text-[10px] font-mono uppercase tracking-wider shrink-0">
-            {(["volume", "value", "txnsPerCapita", "spendsPerCapita"] as MapMetric[]).map((m) => (
+            {MAP_METRICS.map((m) => (
               <button
                 key={m}
                 onClick={() => setMapMetric(m)}
@@ -404,10 +332,9 @@ function OverviewPage() {
                   );
                 })}
               </ol>
-              {/* Map intentionally hidden while keeping the component wired for easy restoration. */}
-              <div className="hidden" aria-hidden="true">
-                <StateMap data={stateData} mapMetric={mapMetric} populations={populations} />
-              </div>
+              {/* StateMap (src/components/upi/StateMap.tsx) intentionally not rendered:
+                  even hidden it fetched the 756KB /india-states.json topojson.
+                  Re-import and render it here when the map view returns. */}
             </div>
 
             {/* Per-capita insights — shown only when per-capita mode is active */}
