@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   allMonthsQuery,
   eventsQuery,
+  mccDataQuery,
   monthDataQuery,
   MonthBucket,
   p2pmQuery,
@@ -13,10 +14,11 @@ import {
 } from "./queryOptions";
 import { AVAILABLE_MONTHS, LATEST_MONTH } from "./queries";
 import { buildSeasonalityMatrix } from "./insights";
-import { AppMonthData, Metric, TrendPoint } from "./types";
+import { AppMonthData, MccRow, Metric, TrendPoint } from "./types";
 
 const EMPTY_MONTHS: MonthBucket[] = [];
 const EMPTY_ROWS: AppMonthData[] = [];
+const EMPTY_MCC: MccRow[] = [];
 
 /** Full history (one paginated fetch, shared by every consumer). */
 export function useAllMonths() {
@@ -67,6 +69,12 @@ export function useMarketEvents() {
 export function useP2PM() {
   const { data, isPending } = useQuery(p2pmQuery());
   return { data: data ?? [], isPending };
+}
+
+/** Full merchant-category history (one paginated fetch, shared by every consumer). */
+export function useMccData() {
+  const { data, isPending } = useQuery(mccDataQuery());
+  return { mccRows: data ?? EMPTY_MCC, isPending };
 }
 
 // ── Pure derivations over the in-memory history ──────────────────────────────

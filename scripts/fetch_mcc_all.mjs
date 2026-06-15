@@ -52,7 +52,20 @@ const DRY_RUN = process.argv.includes("--dry-run");
 // ---------------------------------------------------------------------------
 // Month list — Jan 2021 → May 2026
 // ---------------------------------------------------------------------------
-const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function buildMonthList() {
   const out = [];
@@ -86,8 +99,23 @@ async function fetchMccMonth(year, month) {
   const json = await res.json();
   const tableDetail = json?.data?.results?.tableDetail;
   if (!Array.isArray(tableDetail) || tableDetail.length === 0) return [];
-  // Skip the Total row (mcc: null) and "Others" catch-all has mcc: "Others" — keep it
-  return tableDetail.filter((r) => r.mcc !== null);
+  return tableDetail.map(normalizeMccRow).filter((r) => r !== null);
+}
+
+// NPCI's row shapes vary by month:
+//   • Total row     — description "Total" (mcc usually null). Always dropped.
+//   • Others bucket — historically mcc "Others"; in some 2026 months mcc is null
+//     with description "Others". Keyed as "Others" so it is never confused with Total.
+// Returns null for rows that should be skipped.
+function normalizeMccRow(r) {
+  const desc = (r.description ?? "").trim();
+  if (desc === "Total") return null;
+  let mcc = r.mcc;
+  if (mcc == null) {
+    if (desc === "Others") mcc = "Others";
+    else return null; // an unlabelled total/blank row — skip
+  }
+  return { ...r, mcc };
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -96,16 +124,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Upsert helpers
 // ---------------------------------------------------------------------------
 async function upsertCodes(codes) {
-  const { error } = await supabase
-    .from("upi_mcc_codes")
-    .upsert(codes, { onConflict: "mcc" });
+  const { error } = await supabase.from("upi_mcc_codes").upsert(codes, { onConflict: "mcc" });
   if (error) throw new Error(`upsert upi_mcc_codes: ${error.message}`);
 }
 
 async function loadCodeIndex() {
-  const { data, error } = await supabase
-    .from("upi_mcc_codes")
-    .select("id, mcc");
+  const { data, error } = await supabase.from("upi_mcc_codes").select("id, mcc");
   if (error) throw new Error(`load upi_mcc_codes: ${error.message}`);
   const index = new Map();
   for (const r of data) index.set(r.mcc, r.id);
@@ -120,17 +144,80 @@ async function upsertData(rows) {
 }
 
 // ---------------------------------------------------------------------------
+// Reconciliation: P2M is the source of truth. The MCC tab is the P2M breakdown
+// by merchant category, so the sum of every MCC category (including "Others")
+// should equal the P2M total for the same month.
+// ---------------------------------------------------------------------------
+const RECON_TOLERANCE_PCT = 0.1;
+
+async function loadP2MTotals() {
+  const map = new Map();
+  const { data, error } = await supabase
+    .from("upi_p2p_p2m")
+    .select("year, month_num, p2m_volume_mn, p2m_value_cr");
+  if (error) {
+    console.warn(`Reconciliation: could not load upi_p2p_p2m — ${error.message}`);
+    return map;
+  }
+  for (const r of data) {
+    map.set(`${r.year}-${r.month_num}`, {
+      vol: Number(r.p2m_volume_mn),
+      val: Number(r.p2m_value_cr),
+    });
+  }
+  return map;
+}
+
+const fmtPct = (p) => (p == null ? "n/a" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`).padStart(8);
+
+async function reconcileAll(monthData) {
+  const p2mTotals = await loadP2MTotals();
+  console.log("\n── Reconciliation: P2M (source) vs sum of all MCC categories ──────────────────");
+  console.log(
+    "Month       P2M val (cr)   MCC val (cr)    val Δ    P2M vol (mn)   MCC vol (mn)    vol Δ",
+  );
+  console.log("─".repeat(92));
+  let warnings = 0;
+  for (const m of monthData) {
+    const p = p2mTotals.get(`${m.year}-${m.month_num}`);
+    const mccVol = m.rows.reduce((a, r) => a + (parseNum(r.volume_in_mn) ?? 0), 0);
+    const mccVal = m.rows.reduce((a, r) => a + (parseNum(r.value_in_cr) ?? 0), 0);
+    const label = `${m.month} ${m.year}`.padEnd(10);
+    if (!p) {
+      console.log(`${label}  (no P2M row)`);
+      continue;
+    }
+    const volPct = p.vol > 0 ? ((mccVol - p.vol) / p.vol) * 100 : null;
+    const valPct = p.val > 0 ? ((mccVal - p.val) / p.val) * 100 : null;
+    const flag =
+      Math.abs(volPct ?? 0) > RECON_TOLERANCE_PCT || Math.abs(valPct ?? 0) > RECON_TOLERANCE_PCT
+        ? " ⚠"
+        : "";
+    if (flag) warnings++;
+    console.log(
+      `${label}  ${p.val.toFixed(2).padStart(12)}  ${mccVal.toFixed(2).padStart(12)}  ${fmtPct(valPct)}  ` +
+        `${p.vol.toFixed(2).padStart(12)}  ${mccVol.toFixed(2).padStart(12)}  ${fmtPct(volPct)}${flag}`,
+    );
+  }
+  console.log(
+    warnings
+      ? `\n⚠ ${warnings} month(s) deviate from P2M by more than ${RECON_TOLERANCE_PCT}% — check NPCI source or missing categories.`
+      : `\n✓ All months reconcile with P2M within ${RECON_TOLERANCE_PCT}%.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 const months = buildMonthList();
 console.log(
   `${DRY_RUN ? "[DRY RUN] " : ""}Fetching MCC data for ${months.length} months` +
-  ` (${months[0].month} ${months[0].year} → ${months.at(-1).month} ${months.at(-1).year})\n`
+    ` (${months[0].month} ${months[0].year} → ${months.at(-1).month} ${months.at(-1).year})\n`,
 );
 
 // Collect all unique MCC codes across all months first
 const codeMap = new Map(); // mcc -> { mcc, type, description }
-const monthData = [];      // { year, month, month_num, rows[] }
+const monthData = []; // { year, month, month_num, rows[] }
 let fetchErrors = 0;
 
 for (const { year, month, month_num } of months) {
@@ -150,7 +237,9 @@ for (const { year, month, month_num } of months) {
   if (DRY_RUN && year === 2024 && month === "May") {
     console.log("\n  Sample rows (May 2024):");
     for (const r of rows.slice(0, 5)) {
-      console.log(`    [${r.type}] MCC ${r.mcc} — ${r.description}: vol=${r.volume_in_mn} val=${r.value_in_cr}`);
+      console.log(
+        `    [${r.type}] MCC ${r.mcc} — ${r.description}: vol=${r.volume_in_mn} val=${r.value_in_cr}`,
+      );
     }
   }
 
@@ -163,7 +252,11 @@ for (const { year, month, month_num } of months) {
   await sleep(150);
 }
 
-console.log(`\nFetch complete. Unique MCC codes: ${codeMap.size}, months: ${monthData.length}, errors: ${fetchErrors}`);
+console.log(
+  `\nFetch complete. Unique MCC codes: ${codeMap.size}, months: ${monthData.length}, errors: ${fetchErrors}`,
+);
+
+await reconcileAll(monthData);
 
 if (DRY_RUN) {
   console.log("\n[DRY RUN] MCC codes that would be upserted:");
@@ -190,12 +283,12 @@ for (const { year, month, month_num, rows } of monthData) {
   const factRows = rows
     .filter((r) => codeIndex.has(r.mcc))
     .map((r) => ({
-      mcc_id:    codeIndex.get(r.mcc),
+      mcc_id: codeIndex.get(r.mcc),
       year,
       month,
       month_num,
       volume_mn: parseNum(r.volume_in_mn),
-      value_cr:  parseNum(r.value_in_cr),
+      value_cr: parseNum(r.value_in_cr),
     }));
 
   await upsertData(factRows);

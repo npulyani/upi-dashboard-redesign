@@ -14,6 +14,7 @@ import {
 } from "@/lib/upi/queries";
 import {
   useAllMonths,
+  useMccData,
   useMonthData,
   usePopulations,
   useSeasonalityMatrix,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/upi/hooks";
 import { calcPerCapita, calcSpendsPerCapita } from "@/lib/upi/population";
 import { generateNarrative } from "@/lib/upi/insights";
+import { latestMccMonth, mccForMonth, pickMccMetric } from "@/lib/upi/mcc";
 import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import { MapMetric } from "@/lib/upi/types";
 
@@ -154,6 +156,19 @@ function OverviewPage() {
     [month, year, current, previous, metric, stateLeaderboard],
   );
 
+  // Largest merchant category for the selected month (falls back to latest MCC month).
+  const { mccRows } = useMccData();
+  const topCategory = useMemo(() => {
+    if (!mccRows.length) return null;
+    const hasSelected = mccRows.some((r) => r.year === year && r.month === month);
+    const eff = hasSelected ? { year, month } : latestMccMonth(mccRows);
+    if (!eff) return null;
+    const rows = mccForMonth(mccRows, eff.year, eff.month, false);
+    if (!rows.length) return null;
+    const top = [...rows].sort((a, b) => pickMccMetric(b, metric) - pickMccMetric(a, metric))[0];
+    return { top, isLatest: eff.year === year && eff.month === month };
+  }, [mccRows, year, month, metric]);
+
   if (loading && current.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground font-mono text-xs uppercase tracking-widest">
@@ -181,11 +196,19 @@ function OverviewPage() {
           <CardLabel className="text-background/60">This month in UPI</CardLabel>
           <p className="font-serif text-xl lg:text-2xl mt-2 leading-snug text-background">
             {narrative}
+            {topCategory && (
+              <> The biggest merchant category is {topCategory.top.description}.</>
+            )}
           </p>
-          <div className="mt-8 grid grid-cols-3 gap-4">
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Stat label="Apps" value={String(current.length)} />
             <Stat label="Top 2 share" value={`${top2Share.toFixed(0)}%`} />
             <Stat label="MoM" value={`${mom >= 0 ? "+" : ""}${mom.toFixed(1)}%`} />
+            {topCategory && (
+              <Link to="/dashboard/spending" className="block hover:opacity-80 transition-opacity">
+                <Stat label="Top category" value={topCategory.top.description} />
+              </Link>
+            )}
           </div>
         </BentoCard>
       )}

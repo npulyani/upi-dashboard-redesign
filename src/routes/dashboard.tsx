@@ -41,7 +41,7 @@ const TABS = [
   { name: "Trends", href: "/dashboard/trends", key: "2" },
   { name: "All apps", href: "/dashboard/data", key: "3" },
   { name: "Year Review", href: "/dashboard/year", key: "4" },
-  { name: "Context", href: "/dashboard/context", key: "5" },
+  { name: "Spending", href: "/dashboard/spending", key: "5" },
 ] as const;
 
 function DashboardLayout() {
@@ -81,7 +81,7 @@ function Shell() {
       else if (e.key === "2") navigate({ to: "/dashboard/trends" });
       else if (e.key === "3") navigate({ to: "/dashboard/data" });
       else if (e.key === "4") navigate({ to: "/dashboard/year" });
-      else if (e.key === "5") navigate({ to: "/dashboard/context" });
+      else if (e.key === "5") navigate({ to: "/dashboard/spending" });
       else if (e.key === "?") setShortcutsOpen(true);
       else if (e.key === "/") {
         e.preventDefault();
@@ -139,9 +139,7 @@ function Shell() {
             <div className="flex-1">
               <MonthScrubber year={year} month={month} onChange={handleMonthChange} />
             </div>
-            {pathname !== "/dashboard/context" && (
-              <MetricToggle metric={metric} onChange={handleMetricChange} />
-            )}
+            <MetricToggle metric={metric} onChange={handleMetricChange} />
           </div>
 
           {/* Mobile nav */}
