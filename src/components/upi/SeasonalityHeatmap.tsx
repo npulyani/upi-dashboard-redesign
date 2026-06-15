@@ -3,20 +3,41 @@ import { SeasonalityCell } from "@/lib/upi/insights";
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function cellColor(delta: number | null, mom: number | null): string {
+function winsorize(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function cellColor(delta: number | null, mom: number | null, lo: number, hi: number): string {
   if (mom === null) return "bg-foreground/5 text-muted-foreground";
-  const v = delta !== null ? delta : mom;
-  if (v > 15) return "bg-emerald-500 text-white";
-  if (v > 7) return "bg-emerald-400 text-white";
-  if (v > 2) return "bg-emerald-300/80 text-emerald-950";
-  if (v > -2) return "bg-foreground/8 text-foreground";
-  if (v > -7) return "bg-rose-200/80 text-rose-900";
-  if (v > -15) return "bg-rose-400 text-white";
+  const raw = delta !== null ? delta : mom;
+  // Clip outliers to the IQR-derived range before applying colour thresholds
+  const v = winsorize(raw, lo, hi);
+  const span = Math.max(hi, 1);
+  if (v > span * 0.6)  return "bg-emerald-500 text-white";
+  if (v > span * 0.3)  return "bg-emerald-400 text-white";
+  if (v > span * 0.08) return "bg-emerald-300/80 text-emerald-950";
+  if (v > -span * 0.08) return "bg-foreground/8 text-foreground";
+  if (v > -span * 0.3)  return "bg-rose-200/80 text-rose-900";
+  if (v > -span * 0.6)  return "bg-rose-400 text-white";
   return "bg-rose-600 text-white";
 }
 
 export const SeasonalityHeatmap = memo(function SeasonalityHeatmap({ matrix }: { matrix: SeasonalityCell[][] }) {
   const years = useMemo(() => matrix.map((row) => row[0]?.year).filter(Boolean), [matrix]);
+
+  // IQR-based winsorisation bounds — computed once per matrix
+  const [wLo, wHi] = useMemo(() => {
+    const vals = matrix
+      .flatMap((row) => row)
+      .map((c) => c.delta_from_avg ?? c.mom)
+      .filter((v): v is number => v !== null)
+      .sort((a, b) => a - b);
+    if (vals.length < 4) return [-15, 15];
+    const q1 = vals[Math.floor(vals.length * 0.25)];
+    const q3 = vals[Math.floor(vals.length * 0.75)];
+    const iqr = q3 - q1;
+    return [q1 - 1.5 * iqr, q3 + 1.5 * iqr];
+  }, [matrix]);
 
   // Compute per-month averages for the footer
   const monthAvgs = useMemo(() => {
@@ -64,7 +85,7 @@ export const SeasonalityHeatmap = memo(function SeasonalityHeatmap({ matrix }: {
               {row.map((cell) => (
                 <td key={cell.month_num} className="py-0.5">
                   <div
-                    className={`rounded-md text-center py-1.5 px-1 font-mono text-[11px] font-medium tabular-nums transition-colors ${cellColor(cell.delta_from_avg, cell.mom)}`}
+                    className={`rounded-md text-center py-1.5 px-1 font-mono text-[11px] font-medium tabular-nums transition-colors ${cellColor(cell.delta_from_avg, cell.mom, wLo, wHi)}`}
                     title={
                       cell.mom !== null
                         ? `MoM: ${cell.mom >= 0 ? "+" : ""}${cell.mom.toFixed(1)}%${cell.delta_from_avg !== null ? ` (${cell.delta_from_avg >= 0 ? "+" : ""}${cell.delta_from_avg.toFixed(1)}% vs avg)` : ""}`

@@ -1,0 +1,272 @@
+[
+  {
+    "app": "PhonePe",
+    "parent": "Walmart (via PhonePe Pvt Ltd)",
+    "type": "TPAP",
+    "launched": "Dec 2015",
+    "hq": "Bengaluru",
+    "psp_banks": ["Yes Bank", "ICICI Bank", "Axis Bank"],
+    "play_store_rating": 4.4,
+    "play_store_installs": "500M+",
+    "blurb": "India's largest UPI app by transaction volume",
+    "features": {
+      "upi_lite": true,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": true,
+      "upi_circle": true
+    }
+  },
+  {
+    "app": "Google Pay",
+    "parent": "Google (Alphabet)",
+    "type": "TPAP",
+    "launched": "Sep 2017",
+    "hq": "Bengaluru (India)",
+    "psp_banks": ["Axis Bank", "HDFC Bank", "ICICI Bank", "SBI"],
+    "play_store_rating": 4.2,
+    "play_store_installs": "100M+",
+    "blurb": "Google's payments app, launched as Tez in 2017",
+    "features": {
+      "upi_lite": true,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": true,
+      "upi_circle": true
+    }
+  },
+  {
+    "app": "Paytm",
+    "parent": "One97 Communications",
+    "type": "TPAP",
+    "launched": "Jan 2014",
+    "hq": "Noida",
+    "psp_banks": ["Axis Bank", "HDFC Bank", "SBI", "Yes Bank"],
+    "play_store_rating": 4.5,
+    "play_store_installs": "500M+",
+    "blurb": "India's pioneer payments super-app; migrated off Paytm Payments Bank in 2024",
+    "features": {
+      "upi_lite": true,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": true,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "BHIM",
+    "parent": "NPCI",
+    "type": "Govt",
+    "launched": "Dec 2016",
+    "hq": "Mumbai",
+    "psp_banks": [],
+    "play_store_rating": 3.8,
+    "play_store_installs": "50M+",
+    "blurb": "India's reference UPI app, built and operated by NPCI",
+    "features": {
+      "upi_lite": true,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": true,
+      "upi_circle": true
+    }
+  },
+  {
+    "app": "Amazon Pay",
+    "parent": "Amazon",
+    "type": "TPAP",
+    "launched": "2017",
+    "hq": "Bengaluru",
+    "psp_banks": ["Axis Bank", "Yes Bank", "RBL Bank"],
+    "play_store_rating": 3.9,
+    "play_store_installs": "500M+",
+    "blurb": "Amazon's payment arm; popular for bill payments and merchant checkout",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "WhatsApp",
+    "parent": "Meta",
+    "type": "TPAP",
+    "launched": "Nov 2020",
+    "hq": "Menlo Park, USA",
+    "psp_banks": ["ICICI Bank", "Axis Bank", "HDFC Bank", "SBI"],
+    "play_store_rating": 4.0,
+    "play_store_installs": "5B+",
+    "blurb": "UPI payments embedded in India's most-used messaging app",
+    "features": {
+      "upi_lite": false,
+      "autopay": false,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "CRED",
+    "parent": "Dreamplug Technologies",
+    "type": "TPAP",
+    "launched": "2018",
+    "hq": "Bengaluru",
+    "psp_banks": ["Axis Bank", "Federal Bank", "Yes Bank"],
+    "play_store_rating": 4.7,
+    "play_store_installs": "10M+",
+    "blurb": "Premium members-only app targeting high-credit-score users",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "Navi",
+    "parent": "Navi Technologies",
+    "type": "TPAP",
+    "launched": "2021",
+    "hq": "Bengaluru",
+    "psp_banks": ["ICICI Bank"],
+    "play_store_rating": 4.4,
+    "play_store_installs": "10M+",
+    "blurb": "Sachin Bansal's fintech offering loans, insurance, and UPI payments",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "super.money",
+    "parent": "Flipkart (Walmart)",
+    "type": "TPAP",
+    "launched": "2023",
+    "hq": "Bengaluru",
+    "psp_banks": ["Yes Bank"],
+    "play_store_rating": 4.5,
+    "play_store_installs": "5M+",
+    "blurb": "Flipkart's fintech arm combining UPI payments, credit, fixed deposits, and rewards in one app",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "Slice",
+    "parent": "North East Small Finance Bank",
+    "type": "TPAP",
+    "launched": "2016",
+    "hq": "Bengaluru",
+    "psp_banks": ["North East Small Finance Bank"],
+    "play_store_rating": 4.3,
+    "play_store_installs": "10M+",
+    "blurb": "BNPL-to-bank startup bringing credit-native UPI to young professionals",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": true,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "MobiKwik",
+    "parent": "One MobiKwik Systems",
+    "type": "TPAP",
+    "launched": "2009",
+    "hq": "Gurugram",
+    "psp_banks": ["ICICI Bank"],
+    "play_store_rating": 4.1,
+    "play_store_installs": "50M+",
+    "blurb": "One of India's earliest mobile wallets, now a full UPI app",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "Groww",
+    "parent": "Nextbillion Technology",
+    "type": "TPAP",
+    "launched": "2022",
+    "hq": "Bengaluru",
+    "psp_banks": ["HDFC Bank"],
+    "play_store_rating": 4.4,
+    "play_store_installs": "50M+",
+    "blurb": "Investment platform that added UPI as a payments layer for its 10M+ investors",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "Tata Neu",
+    "parent": "Tata Digital (Tata Group)",
+    "type": "TPAP",
+    "launched": "Apr 2022",
+    "hq": "Mumbai",
+    "psp_banks": ["HDFC Bank"],
+    "play_store_rating": 3.8,
+    "play_store_installs": "50M+",
+    "blurb": "Tata Group's super-app combining retail, hospitality, and payments",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "Jupiter Money",
+    "parent": "Amica Financial Technologies",
+    "type": "TPAP",
+    "launched": "2021",
+    "hq": "Bengaluru",
+    "psp_banks": ["Federal Bank"],
+    "play_store_rating": 4.5,
+    "play_store_installs": "5M+",
+    "blurb": "Digital-native bank account with built-in UPI and smart spending analytics",
+    "features": {
+      "upi_lite": false,
+      "autopay": true,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  },
+  {
+    "app": "FamPay",
+    "parent": "FamPay Technologies",
+    "type": "TPAP",
+    "launched": "2019",
+    "hq": "Bengaluru",
+    "psp_banks": ["ICICI Bank"],
+    "play_store_rating": 4.4,
+    "play_store_installs": "5M+",
+    "blurb": "India's first payments app for teenagers, offering numberless cards and UPI",
+    "features": {
+      "upi_lite": false,
+      "autopay": false,
+      "rupay_credit": false,
+      "international": false,
+      "upi_circle": false
+    }
+  }
+]
