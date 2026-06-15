@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "../supabase";
 import {
   AppMonthData,
+  MccRow,
   MONTH_TO_NUM,
   StatewiseRow,
   StatewiseTrendPoint,
@@ -239,6 +240,46 @@ async function fetchP2PMData(): Promise<P2PMPoint[]> {
   });
 }
 
+type RawMccRow = {
+  year: number;
+  month: string;
+  month_num: number;
+  volume_mn: number | null;
+  value_cr: number | null;
+  upi_mcc_codes: { mcc: string; type: string; description: string } | null;
+};
+
+/** Full MCC history in one paginated query, joined to the code dimension table. */
+async function fetchMccData(): Promise<MccRow[]> {
+  const raw: RawMccRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("upi_mcc_data")
+      .select(
+        "year, month, month_num, volume_mn, value_cr, upi_mcc_codes(mcc, type, description)",
+      )
+      .order("year", { ascending: true })
+      .order("month_num", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    raw.push(...(data as unknown as RawMccRow[]));
+    if (data.length < PAGE_SIZE) break;
+  }
+  return raw
+    .filter((r) => r.upi_mcc_codes)
+    .map((r) => ({
+      mcc: r.upi_mcc_codes!.mcc,
+      type: r.upi_mcc_codes!.type,
+      description: r.upi_mcc_codes!.description,
+      year: r.year,
+      month: r.month,
+      month_num: r.month_num,
+      volume_mn: Number(r.volume_mn ?? 0),
+      value_cr: Number(r.value_cr ?? 0),
+    }));
+}
+
 // ── Query options ────────────────────────────────────────────────────────────
 // All keys rooted at "upi" so the whole data layer can be invalidated at once.
 // Data updates once a month, so long stale times are safe.
@@ -298,4 +339,12 @@ export const p2pmQuery = () =>
     queryKey: ["upi", "p2pm"],
     queryFn: fetchP2PMData,
     staleTime: HOUR,
+  });
+
+export const mccDataQuery = () =>
+  queryOptions({
+    queryKey: ["upi", "mcc"],
+    queryFn: fetchMccData,
+    staleTime: HOUR,
+    gcTime: 24 * HOUR,
   });

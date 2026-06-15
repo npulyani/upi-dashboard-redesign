@@ -14,9 +14,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardYearRouteImport } from './routes/dashboard.year'
 import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
+import { Route as DashboardSpendingRouteImport } from './routes/dashboard.spending'
 import { Route as DashboardMilestonesRouteImport } from './routes/dashboard.milestones'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
-import { Route as DashboardContextRouteImport } from './routes/dashboard.context'
 import { Route as DashboardAppAppNameRouteImport } from './routes/dashboard.app.$appName'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -44,6 +44,11 @@ const DashboardTrendsRoute = DashboardTrendsRouteImport.update({
   path: '/trends',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSpendingRoute = DashboardSpendingRouteImport.update({
+  id: '/spending',
+  path: '/spending',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardMilestonesRoute = DashboardMilestonesRouteImport.update({
   id: '/milestones',
   path: '/milestones',
@@ -52,11 +57,6 @@ const DashboardMilestonesRoute = DashboardMilestonesRouteImport.update({
 const DashboardDataRoute = DashboardDataRouteImport.update({
   id: '/data',
   path: '/data',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardContextRoute = DashboardContextRouteImport.update({
-  id: '/context',
-  path: '/context',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
@@ -68,9 +68,9 @@ const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
+  '/dashboard/spending': typeof DashboardSpendingRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -78,9 +78,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
+  '/dashboard/spending': typeof DashboardSpendingRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -90,9 +90,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
-  '/dashboard/context': typeof DashboardContextRoute
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
+  '/dashboard/spending': typeof DashboardSpendingRoute
   '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -103,9 +103,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
+    | '/dashboard/spending'
     | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard/'
@@ -113,9 +113,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
+    | '/dashboard/spending'
     | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard'
@@ -124,9 +124,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/dashboard/context'
     | '/dashboard/data'
     | '/dashboard/milestones'
+    | '/dashboard/spending'
     | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard/'
@@ -175,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTrendsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/spending': {
+      id: '/dashboard/spending'
+      path: '/spending'
+      fullPath: '/dashboard/spending'
+      preLoaderRoute: typeof DashboardSpendingRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/milestones': {
       id: '/dashboard/milestones'
       path: '/milestones'
@@ -189,13 +196,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDataRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/context': {
-      id: '/dashboard/context'
-      path: '/context'
-      fullPath: '/dashboard/context'
-      preLoaderRoute: typeof DashboardContextRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/dashboard/app/$appName': {
       id: '/dashboard/app/$appName'
       path: '/app/$appName'
@@ -207,9 +207,9 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
-  DashboardContextRoute: typeof DashboardContextRoute
   DashboardDataRoute: typeof DashboardDataRoute
   DashboardMilestonesRoute: typeof DashboardMilestonesRoute
+  DashboardSpendingRoute: typeof DashboardSpendingRoute
   DashboardTrendsRoute: typeof DashboardTrendsRoute
   DashboardYearRoute: typeof DashboardYearRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -217,9 +217,9 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardContextRoute: DashboardContextRoute,
   DashboardDataRoute: DashboardDataRoute,
   DashboardMilestonesRoute: DashboardMilestonesRoute,
+  DashboardSpendingRoute: DashboardSpendingRoute,
   DashboardTrendsRoute: DashboardTrendsRoute,
   DashboardYearRoute: DashboardYearRoute,
   DashboardIndexRoute: DashboardIndexRoute,

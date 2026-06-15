@@ -52,6 +52,19 @@ export interface StatewiseRow {
   value_contribution: number;
 }
 
+/** One merchant-category row for a single month (joined from upi_mcc_data + upi_mcc_codes). */
+export interface MccRow {
+  mcc: string;
+  /** NPCI transacting tier, e.g. "High Transacting Categories". */
+  type: string;
+  description: string;
+  year: number;
+  month: string;
+  month_num: number;
+  volume_mn: number;
+  value_cr: number;
+}
+
 export const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
