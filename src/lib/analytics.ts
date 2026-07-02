@@ -70,4 +70,10 @@ export const analytics = {
   circularPdfViewed(ocNumber: string) {
     capture("circular_pdf_viewed", { oc_number: ocNumber });
   },
+  circularSummaryViewed(ocNumber: string) {
+    capture("circular_summary_viewed", { oc_number: ocNumber });
+  },
+  circularReferenceClicked(ocNumber: string, referencedOc: string) {
+    capture("circular_reference_clicked", { oc_number: ocNumber, referenced_oc: referencedOc });
+  },
 };

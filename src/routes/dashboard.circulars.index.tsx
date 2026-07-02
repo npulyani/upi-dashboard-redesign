@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { CircularSearchBox } from "@/components/upi/circulars/CircularSearchBox";
 import { CircularYearPills } from "@/components/upi/circulars/CircularYearPills";
+import { CircularCategoryPills } from "@/components/upi/circulars/CircularCategoryPills";
 import { CircularListItem } from "@/components/upi/circulars/CircularListItem";
 import { useCircularsInfinite, useCircularYears } from "@/lib/upi/hooks";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
@@ -26,12 +27,13 @@ function CircularsPage() {
   const [rawSearch, setRawSearch] = useState("");
   const debouncedSearch = useDebouncedValue(rawSearch, 350);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   const searchQuery = useMemo(() => classifySearch(debouncedSearch), [debouncedSearch]);
   const years = useCircularYears();
   const { rows, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useCircularsInfinite(selectedYear, searchQuery);
+    useCircularsInfinite(selectedYear, searchQuery, selectedCategory);
   const isKeywordSearch = searchQuery?.mode === "keyword";
   const groups = useMemo(
     () => groupCirculars(rows, isKeywordSearch ? "relevance" : "date"),
@@ -98,6 +100,8 @@ function CircularsPage() {
       <CircularSearchBox value={rawSearch} onChange={setRawSearch} />
 
       <CircularYearPills years={years} selected={selectedYear} onSelect={handleYearSelect} />
+
+      <CircularCategoryPills selected={selectedCategory} onSelect={setSelectedCategory} />
 
       <BentoCard className="!p-0 overflow-hidden">
         {isPending && groups.length === 0 ? (

@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, FileText } from "lucide-react";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { CircularTextView } from "@/components/upi/circulars/CircularTextView";
+import { SmartSummaryCard } from "@/components/upi/circulars/SmartSummaryCard";
 import { useCircular } from "@/lib/upi/hooks";
 import { circularDisplayName } from "@/lib/upi/circularText";
 import { supabase } from "@/lib/supabase";
@@ -73,23 +74,27 @@ function CircularDetailPage() {
 
       <BentoCard>
         <CardLabel>{circular.oc_number ?? circular.file_name}</CardLabel>
-        <h1 className="font-serif text-3xl lg:text-4xl mt-1">{title}</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl mt-1">{title}</h1>
         <p className="mt-2 font-mono text-xs text-muted-foreground">
           {formatDocDate(circular.doc_date)}
           {circular.doc_reference ? ` · Ref ${circular.doc_reference}` : ""}
         </p>
-        {pdfUrl && (
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => analytics.circularPdfViewed(decoded)}
-            className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
-          >
-            <FileText className="size-3.5" /> View original PDF
-          </a>
-        )}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {pdfUrl && (
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => analytics.circularPdfViewed(decoded)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              <FileText className="size-3.5" /> View original PDF
+            </a>
+          )}
+        </div>
       </BentoCard>
+
+      <SmartSummaryCard circular={circular} />
 
       <BentoCard>
         <CardLabel>Circular text</CardLabel>

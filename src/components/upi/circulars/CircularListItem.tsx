@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { circularRouteKey, GroupedCircular } from "@/lib/upi/circularsQueryOptions";
-import { circularDisplayName, deriveSnippet } from "@/lib/upi/circularText";
+import { circularDisplayName, deriveSnippet, isFutureDeadline } from "@/lib/upi/circularText";
 import { CircularRow } from "@/lib/upi/types";
+import { Badge } from "@/components/ui/badge";
 
 function formatDocDate(docDate: string | null): string {
   if (!docDate) return "Date unknown";
@@ -31,6 +32,8 @@ function CircularRowLine({
     () => (highlightTerm ? deriveSnippet(row.content_text, highlightTerm) : null),
     [row.content_text, highlightTerm],
   );
+  const actionItems = row.summary_action_items ?? [];
+  const hasFutureDeadline = actionItems.some((a) => isFutureDeadline(a.deadline));
 
   function open() {
     navigate({
@@ -50,16 +53,21 @@ function CircularRowLine({
           open();
         }
       }}
-      className={`flex items-start gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] ${
+      className={`flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] ${
         indent ? "ml-6 border-l border-foreground/10 pl-4" : ""
       }`}
     >
-      <span
-        className="font-mono text-xs text-primary w-20 flex-shrink-0 truncate mt-0.5"
-        title={badge}
-      >
-        {badge}
-      </span>
+      <div className="flex items-center justify-between gap-2 sm:contents">
+        <span
+          className="font-mono text-xs text-primary w-20 flex-shrink-0 truncate sm:mt-0.5"
+          title={badge}
+        >
+          {badge}
+        </span>
+        <span className="font-mono text-xs text-muted-foreground flex-shrink-0 sm:hidden">
+          {formatDocDate(row.doc_date)}
+        </span>
+      </div>
       <div className="flex-1 min-w-0">
         <span className="block text-sm font-medium leading-snug line-clamp-2">{title}</span>
         {snippet && (
@@ -76,6 +84,26 @@ function CircularRowLine({
           </p>
         )}
       </div>
+      {(row.summary_category || actionItems.length > 0) && (
+        <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5">
+          {row.summary_category && (
+            <Badge variant="secondary" className="text-[10px]">
+              {row.summary_category}
+            </Badge>
+          )}
+          {actionItems.length > 0 && (
+            <span
+              className={`font-mono text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                hasFutureDeadline
+                  ? "bg-rose-500/10 text-rose-700"
+                  : "bg-foreground/[0.04] text-muted-foreground"
+              }`}
+            >
+              Action required
+            </span>
+          )}
+        </div>
+      )}
       <span className="font-mono text-xs text-muted-foreground flex-shrink-0 hidden sm:block mt-0.5">
         {formatDocDate(row.doc_date)}
       </span>
@@ -83,7 +111,7 @@ function CircularRowLine({
         to="/dashboard/circulars/$ocNumber"
         params={{ ocNumber: encodeURIComponent(routeKey) }}
         onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 px-3 py-1.5 rounded-full border border-foreground/10 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors whitespace-nowrap"
+        className="flex-shrink-0 hidden sm:inline-block px-3 py-1.5 rounded-full border border-foreground/10 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors whitespace-nowrap"
       >
         View details
       </Link>
