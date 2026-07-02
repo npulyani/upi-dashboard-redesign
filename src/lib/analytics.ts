@@ -52,10 +52,22 @@ export const analytics = {
   shareClicked(method: "clipboard" | "download", success: boolean) {
     capture("share_clicked", { method, success });
   },
-  keyboardShortcutUsed(key: string, action: string) {
-    capture("keyboard_shortcut_used", { key, action });
-  },
   contextPageViewed() {
     capture("context_page_viewed", {});
+  },
+  circularsPageViewed() {
+    capture("circulars_page_viewed", {});
+  },
+  circularSearchPerformed(queryType: "oc_number" | "keyword", query: string) {
+    capture("circular_search_performed", { query_type: queryType, query });
+  },
+  circularYearFilterChanged(year: number | null) {
+    capture("circular_year_filter_changed", { year: year ?? "all" });
+  },
+  circularOpened(ocNumber: string) {
+    capture("circular_opened", { oc_number: ocNumber });
+  },
+  circularPdfViewed(ocNumber: string) {
+    capture("circular_pdf_viewed", { oc_number: ocNumber });
   },
 };

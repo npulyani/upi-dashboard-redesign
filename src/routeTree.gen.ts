@@ -17,6 +17,8 @@ import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
 import { Route as DashboardSpendingRouteImport } from './routes/dashboard.spending'
 import { Route as DashboardMilestonesRouteImport } from './routes/dashboard.milestones'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
+import { Route as DashboardCircularsIndexRouteImport } from './routes/dashboard.circulars.index'
+import { Route as DashboardCircularsOcNumberRouteImport } from './routes/dashboard.circulars.$ocNumber'
 import { Route as DashboardAppAppNameRouteImport } from './routes/dashboard.app.$appName'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -59,6 +61,17 @@ const DashboardDataRoute = DashboardDataRouteImport.update({
   path: '/data',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardCircularsIndexRoute = DashboardCircularsIndexRouteImport.update({
+  id: '/circulars/',
+  path: '/circulars/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCircularsOcNumberRoute =
+  DashboardCircularsOcNumberRouteImport.update({
+    id: '/circulars/$ocNumber',
+    path: '/circulars/$ocNumber',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAppAppNameRoute = DashboardAppAppNameRouteImport.update({
   id: '/app/$appName',
   path: '/app/$appName',
@@ -75,6 +88,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
+  '/dashboard/circulars/$ocNumber': typeof DashboardCircularsOcNumberRoute
+  '/dashboard/circulars/': typeof DashboardCircularsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +100,8 @@ export interface FileRoutesByTo {
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
+  '/dashboard/circulars/$ocNumber': typeof DashboardCircularsOcNumberRoute
+  '/dashboard/circulars': typeof DashboardCircularsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +114,8 @@ export interface FileRoutesById {
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
+  '/dashboard/circulars/$ocNumber': typeof DashboardCircularsOcNumberRoute
+  '/dashboard/circulars/': typeof DashboardCircularsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,6 +129,8 @@ export interface FileRouteTypes {
     | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
+    | '/dashboard/circulars/$ocNumber'
+    | '/dashboard/circulars/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,6 +141,8 @@ export interface FileRouteTypes {
     | '/dashboard/year'
     | '/dashboard'
     | '/dashboard/app/$appName'
+    | '/dashboard/circulars/$ocNumber'
+    | '/dashboard/circulars'
   id:
     | '__root__'
     | '/'
@@ -131,6 +154,8 @@ export interface FileRouteTypes {
     | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
+    | '/dashboard/circulars/$ocNumber'
+    | '/dashboard/circulars/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -196,6 +221,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDataRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/circulars/': {
+      id: '/dashboard/circulars/'
+      path: '/circulars'
+      fullPath: '/dashboard/circulars/'
+      preLoaderRoute: typeof DashboardCircularsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/circulars/$ocNumber': {
+      id: '/dashboard/circulars/$ocNumber'
+      path: '/circulars/$ocNumber'
+      fullPath: '/dashboard/circulars/$ocNumber'
+      preLoaderRoute: typeof DashboardCircularsOcNumberRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/app/$appName': {
       id: '/dashboard/app/$appName'
       path: '/app/$appName'
@@ -214,6 +253,8 @@ interface DashboardRouteChildren {
   DashboardYearRoute: typeof DashboardYearRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardAppAppNameRoute: typeof DashboardAppAppNameRoute
+  DashboardCircularsOcNumberRoute: typeof DashboardCircularsOcNumberRoute
+  DashboardCircularsIndexRoute: typeof DashboardCircularsIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -224,6 +265,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardYearRoute: DashboardYearRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardAppAppNameRoute: DashboardAppAppNameRoute,
+  DashboardCircularsOcNumberRoute: DashboardCircularsOcNumberRoute,
+  DashboardCircularsIndexRoute: DashboardCircularsIndexRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

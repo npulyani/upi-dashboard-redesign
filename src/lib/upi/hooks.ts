@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   allMonthsQuery,
   eventsQuery,
@@ -12,13 +12,21 @@ import {
   statewiseQuery,
   statewiseTrendQuery,
 } from "./queryOptions";
+import {
+  circularQuery,
+  circularsInfiniteQuery,
+  circularYearsQuery,
+  SearchQuery,
+} from "./circularsQueryOptions";
 import { AVAILABLE_MONTHS, LATEST_MONTH } from "./queries";
 import { buildSeasonalityMatrix } from "./insights";
-import { AppMonthData, MccRow, Metric, TrendPoint } from "./types";
+import { AppMonthData, CircularRow, MccRow, Metric, TrendPoint } from "./types";
 
 const EMPTY_MONTHS: MonthBucket[] = [];
 const EMPTY_ROWS: AppMonthData[] = [];
 const EMPTY_MCC: MccRow[] = [];
+const EMPTY_CIRCULARS: CircularRow[] = [];
+const EMPTY_YEARS: number[] = [];
 
 /** Full history (one paginated fetch, shared by every consumer). */
 export function useAllMonths() {
@@ -75,6 +83,23 @@ export function useP2PM() {
 export function useMccData() {
   const { data, isPending } = useQuery(mccDataQuery());
   return { mccRows: data ?? EMPTY_MCC, isPending };
+}
+
+/** Paginated NPCI circulars, refetching from page 0 whenever year/search change. */
+export function useCircularsInfinite(year: number | null, search: SearchQuery | null) {
+  const query = useInfiniteQuery(circularsInfiniteQuery(year, search));
+  const rows = useMemo(() => query.data?.pages.flat() ?? EMPTY_CIRCULARS, [query.data]);
+  return { rows, ...query };
+}
+
+export function useCircularYears() {
+  const { data } = useQuery(circularYearsQuery());
+  return data ?? EMPTY_YEARS;
+}
+
+export function useCircular(ocNumber: string) {
+  const { data, isPending } = useQuery({ ...circularQuery(ocNumber), enabled: !!ocNumber });
+  return { circular: data ?? null, isPending };
 }
 
 // ── Pure derivations over the in-memory history ──────────────────────────────

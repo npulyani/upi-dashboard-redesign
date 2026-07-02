@@ -65,6 +65,25 @@ export interface MccRow {
   value_cr: number;
 }
 
+/** One row from npci_circulars — an official NPCI UPI operating circular. */
+export interface CircularRow {
+  id: number;
+  npci_id: number;
+  oc_number: string | null;
+  oc_base: string | null;
+  /** Human-readable title parsed from the "Subject:" line of the OCR'd body. */
+  oc_name: string | null;
+  file_name: string;
+  doc_reference: string | null;
+  doc_date: string | null;
+  query_year: number;
+  ocr_status: "pending" | "done" | "failed";
+  content_text: string | null;
+  storage_path: string | null;
+  /** Original NPCI URL of the PDF. */
+  source_url: string | null;
+}
+
 export const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

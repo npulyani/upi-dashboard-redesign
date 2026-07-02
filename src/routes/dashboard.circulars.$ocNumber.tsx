@@ -1,0 +1,124 @@
+import { useEffect, useMemo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, FileText } from "lucide-react";
+import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
+import { CircularTextView } from "@/components/upi/circulars/CircularTextView";
+import { useCircular } from "@/lib/upi/hooks";
+import { circularDisplayName } from "@/lib/upi/circularText";
+import { supabase } from "@/lib/supabase";
+import { analytics } from "@/lib/analytics";
+
+export const Route = createFileRoute("/dashboard/circulars/$ocNumber")({
+  head: ({ params }) => ({
+    meta: [{ title: `${decodeURIComponent(params.ocNumber)} — Circulars — State of UPI` }],
+  }),
+  component: CircularDetailPage,
+});
+
+function formatDocDate(docDate: string | null): string {
+  if (!docDate) return "Date unknown";
+  return new Date(docDate).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function CircularDetailPage() {
+  const { ocNumber } = Route.useParams();
+  const decoded = decodeURIComponent(ocNumber);
+  const { circular, isPending } = useCircular(decoded);
+
+  useEffect(() => {
+    analytics.circularOpened(decoded);
+  }, [decoded]);
+
+  // Prefer the circular's original NPCI URL; the storage mirror is a fallback
+  // for the few rows whose source link has rotted.
+  const pdfUrl = useMemo(() => {
+    if (circular?.source_url) return circular.source_url;
+    if (!circular?.storage_path) return null;
+    return supabase.storage.from("circulars").getPublicUrl(circular.storage_path).data.publicUrl;
+  }, [circular]);
+
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground font-mono text-xs uppercase tracking-widest">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!circular) {
+    return (
+      <div className="space-y-5">
+        <BackLink />
+        <BentoCard>
+          <CardLabel>Circulars</CardLabel>
+          <h3 className="font-serif text-2xl mt-1">Circular not found</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We couldn&apos;t find a circular with reference &quot;{decoded}&quot;.
+          </p>
+        </BentoCard>
+      </div>
+    );
+  }
+
+  const title = circularDisplayName(circular);
+  const hasContent = circular.ocr_status === "done" && !!circular.content_text;
+
+  return (
+    <div className="space-y-5">
+      <BackLink />
+
+      <BentoCard>
+        <CardLabel>{circular.oc_number ?? circular.file_name}</CardLabel>
+        <h1 className="font-serif text-3xl lg:text-4xl mt-1">{title}</h1>
+        <p className="mt-2 font-mono text-xs text-muted-foreground">
+          {formatDocDate(circular.doc_date)}
+          {circular.doc_reference ? ` · Ref ${circular.doc_reference}` : ""}
+        </p>
+        {pdfUrl && (
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.circularPdfViewed(decoded)}
+            className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+          >
+            <FileText className="size-3.5" /> View original PDF
+          </a>
+        )}
+      </BentoCard>
+
+      <BentoCard>
+        <CardLabel>Circular text</CardLabel>
+        {hasContent ? (
+          <div className="mt-3">
+            <CircularTextView text={circular.content_text!} />
+          </div>
+        ) : (
+          <div className="mt-3">
+            <h3 className="font-serif text-xl">Full text isn&apos;t available</h3>
+            <p className="mt-2 text-sm text-muted-foreground max-w-prose">
+              We couldn&apos;t extract text for this circular
+              {circular.ocr_status === "failed" ? " (text extraction failed)" : ""}. View the
+              original PDF above instead.
+            </p>
+          </div>
+        )}
+      </BentoCard>
+    </div>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link
+      to="/dashboard/circulars"
+      className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <ArrowLeft className="size-3.5" /> Back to circulars
+    </Link>
+  );
+}

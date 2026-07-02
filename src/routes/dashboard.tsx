@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { DashboardProvider, useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle, MonthScrubber } from "@/components/upi/Controls";
 import { analytics } from "@/lib/analytics";
 import { allMonthsQuery } from "@/lib/upi/queryOptions";
 import type { Metric } from "@/lib/upi/types";
-import { KeyboardShortcutOverlay } from "@/components/upi/KeyboardShortcutOverlay";
 
 export const Route = createFileRoute("/dashboard")({
   loader: ({ context }) => {
@@ -37,11 +35,12 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const TABS = [
-  { name: "Overview", href: "/dashboard", key: "1" },
-  { name: "Trends", href: "/dashboard/trends", key: "2" },
-  { name: "All apps", href: "/dashboard/data", key: "3" },
-  { name: "Year Review", href: "/dashboard/year", key: "4" },
-  { name: "Spending", href: "/dashboard/spending", key: "5" },
+  { name: "Overview", href: "/dashboard" },
+  { name: "Trends", href: "/dashboard/trends" },
+  { name: "All apps", href: "/dashboard/data" },
+  { name: "Year Review", href: "/dashboard/year" },
+  { name: "Spending", href: "/dashboard/spending" },
+  { name: "Circulars", href: "/dashboard/circulars" },
 ] as const;
 
 function DashboardLayout() {
@@ -53,7 +52,7 @@ function DashboardLayout() {
 }
 
 function Shell() {
-  const { year, month, metric, setMonthYear, setMetric, prevMonth, nextMonth } = useDashboard();
+  const { year, month, metric, setMonthYear, setMetric } = useDashboard();
 
   const handleMonthChange = (y: number, m: string) => {
     analytics.monthChanged(y, m, "scrubber");
@@ -65,37 +64,14 @@ function Shell() {
     setMetric(m);
   };
   const pathname = useLocation({ select: (l) => l.pathname });
-  const navigate = useNavigate();
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-      if (e.key === "ArrowLeft") { e.preventDefault(); analytics.keyboardShortcutUsed("ArrowLeft", "prev_month"); analytics.monthChanged(year, month, "arrow_left"); prevMonth(); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); analytics.keyboardShortcutUsed("ArrowRight", "next_month"); analytics.monthChanged(year, month, "arrow_right"); nextMonth(); }
-      else if (e.key === "v" || e.key === "V") { analytics.keyboardShortcutUsed("v", "toggle_metric"); setMetric(metric === "volume" ? "value" : "volume"); }
-      else if (e.key === "1") navigate({ to: "/dashboard" });
-      else if (e.key === "2") navigate({ to: "/dashboard/trends" });
-      else if (e.key === "3") navigate({ to: "/dashboard/data" });
-      else if (e.key === "4") navigate({ to: "/dashboard/year" });
-      else if (e.key === "5") navigate({ to: "/dashboard/spending" });
-      else if (e.key === "?") setShortcutsOpen(true);
-      else if (e.key === "/") {
-        e.preventDefault();
-        const input = document.querySelector<HTMLInputElement>('input[type="search"], input[placeholder*="search" i], input[placeholder*="Search" i]');
-        input?.focus();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [prevMonth, nextMonth, metric, setMetric, navigate]);
+  // The month scrubber and value/volume toggle only govern the monthly-metrics
+  // pages. Circulars is a document archive with its own controls (search + year
+  // pills), so the header collapses to identity + nav there.
+  const showMonthControls = !pathname.startsWith("/dashboard/circulars");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <KeyboardShortcutOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       {/* Header */}
       <header className="border-b border-foreground/5 bg-background/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pt-7 pb-5">
@@ -134,13 +110,15 @@ function Shell() {
             </nav>
           </div>
 
-          {/* Controls bar */}
-          <div className="mt-6 flex flex-col md:flex-row items-stretch md:items-center gap-4">
-            <div className="flex-1">
-              <MonthScrubber year={year} month={month} onChange={handleMonthChange} />
+          {/* Controls bar (monthly-metrics pages only) */}
+          {showMonthControls && (
+            <div className="mt-6 flex flex-col md:flex-row items-stretch md:items-center gap-4">
+              <div className="flex-1">
+                <MonthScrubber year={year} month={month} onChange={handleMonthChange} />
+              </div>
+              <MetricToggle metric={metric} onChange={handleMetricChange} />
             </div>
-            <MetricToggle metric={metric} onChange={handleMetricChange} />
-          </div>
+          )}
 
           {/* Mobile nav */}
           <nav className="md:hidden mt-4 flex gap-0.5 overflow-x-auto bg-foreground/[0.04] p-1 rounded-full text-xs font-medium ring-1 ring-black/5">
@@ -178,14 +156,6 @@ function Shell() {
               Data: NPCI monthly reports · Jan 2021 — May 2026
             </p>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setShortcutsOpen(true)}
-                className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-                aria-label="Keyboard shortcuts"
-              >
-                <kbd className="inline-flex items-center justify-center w-5 h-5 rounded border border-foreground/20 bg-foreground/5 text-[10px]">?</kbd>
-                Shortcuts
-              </button>
               <p className="font-mono text-[10px] text-muted-foreground">
                 State of UPI &mdash; Made with{" "}
                 <span aria-label="love">❤️</span>
