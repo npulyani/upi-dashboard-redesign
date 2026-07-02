@@ -16,12 +16,14 @@ export function CircularTextView({ text }: { text: string }) {
         switch (block.kind) {
           case "letterhead":
             return (
-              <pre
-                key={i}
-                className="font-mono text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed"
-              >
-                {block.text}
-              </pre>
+              <details key={i} className="group">
+                <summary className="text-xs text-muted-foreground cursor-pointer select-none py-1">
+                  Letterhead and addressee block
+                </summary>
+                <pre className="mt-1 font-mono text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {block.text}
+                </pre>
+              </details>
             );
           case "subject":
             return (

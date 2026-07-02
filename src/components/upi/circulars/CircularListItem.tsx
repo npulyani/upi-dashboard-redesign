@@ -50,16 +50,21 @@ function CircularRowLine({
           open();
         }
       }}
-      className={`flex items-start gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] ${
+      className={`flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] ${
         indent ? "ml-6 border-l border-foreground/10 pl-4" : ""
       }`}
     >
-      <span
-        className="font-mono text-xs text-primary w-20 flex-shrink-0 truncate mt-0.5"
-        title={badge}
-      >
-        {badge}
-      </span>
+      <div className="flex items-center justify-between gap-2 sm:contents">
+        <span
+          className="font-mono text-xs text-primary w-20 flex-shrink-0 truncate sm:mt-0.5"
+          title={badge}
+        >
+          {badge}
+        </span>
+        <span className="font-mono text-xs text-muted-foreground flex-shrink-0 sm:hidden">
+          {formatDocDate(row.doc_date)}
+        </span>
+      </div>
       <div className="flex-1 min-w-0">
         <span className="block text-sm font-medium leading-snug line-clamp-2">{title}</span>
         {snippet && (
@@ -83,7 +88,7 @@ function CircularRowLine({
         to="/dashboard/circulars/$ocNumber"
         params={{ ocNumber: encodeURIComponent(routeKey) }}
         onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 px-3 py-1.5 rounded-full border border-foreground/10 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors whitespace-nowrap"
+        className="flex-shrink-0 hidden sm:inline-block px-3 py-1.5 rounded-full border border-foreground/10 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors whitespace-nowrap"
       >
         View details
       </Link>
