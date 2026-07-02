@@ -97,7 +97,8 @@ function CircularsPage() {
         </p>
       </div>
 
-      <CircularSearchBox value={rawSearch} onChange={setRawSearch} />
+      {/* Hidden for now — search has a known issue, re-enable once fixed. */}
+      {/* <CircularSearchBox value={rawSearch} onChange={setRawSearch} /> */}
 
       <CircularYearPills years={years} selected={selectedYear} onSelect={handleYearSelect} />
 
