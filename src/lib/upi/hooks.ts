@@ -85,9 +85,13 @@ export function useMccData() {
   return { mccRows: data ?? EMPTY_MCC, isPending };
 }
 
-/** Paginated NPCI circulars, refetching from page 0 whenever year/search change. */
-export function useCircularsInfinite(year: number | null, search: SearchQuery | null) {
-  const query = useInfiniteQuery(circularsInfiniteQuery(year, search));
+/** Paginated NPCI circulars, refetching from page 0 whenever year/search/category change. */
+export function useCircularsInfinite(
+  year: number | null,
+  search: SearchQuery | null,
+  category: string | null = null,
+) {
+  const query = useInfiniteQuery(circularsInfiniteQuery(year, search, category));
   const rows = useMemo(() => query.data?.pages.flat() ?? EMPTY_CIRCULARS, [query.data]);
   return { rows, ...query };
 }

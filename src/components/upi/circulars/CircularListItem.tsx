@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { circularRouteKey, GroupedCircular } from "@/lib/upi/circularsQueryOptions";
-import { circularDisplayName, deriveSnippet } from "@/lib/upi/circularText";
+import { circularDisplayName, deriveSnippet, isFutureDeadline } from "@/lib/upi/circularText";
 import { CircularRow } from "@/lib/upi/types";
+import { Badge } from "@/components/ui/badge";
 
 function formatDocDate(docDate: string | null): string {
   if (!docDate) return "Date unknown";
@@ -31,6 +32,8 @@ function CircularRowLine({
     () => (highlightTerm ? deriveSnippet(row.content_text, highlightTerm) : null),
     [row.content_text, highlightTerm],
   );
+  const actionItems = row.summary_action_items ?? [];
+  const hasFutureDeadline = actionItems.some((a) => isFutureDeadline(a.deadline));
 
   function open() {
     navigate({
@@ -81,6 +84,26 @@ function CircularRowLine({
           </p>
         )}
       </div>
+      {(row.summary_category || actionItems.length > 0) && (
+        <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5">
+          {row.summary_category && (
+            <Badge variant="secondary" className="text-[10px]">
+              {row.summary_category}
+            </Badge>
+          )}
+          {actionItems.length > 0 && (
+            <span
+              className={`font-mono text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                hasFutureDeadline
+                  ? "bg-rose-500/10 text-rose-700"
+                  : "bg-foreground/[0.04] text-muted-foreground"
+              }`}
+            >
+              Action required
+            </span>
+          )}
+        </div>
+      )}
       <span className="font-mono text-xs text-muted-foreground flex-shrink-0 hidden sm:block mt-0.5">
         {formatDocDate(row.doc_date)}
       </span>

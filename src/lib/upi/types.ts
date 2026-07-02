@@ -65,6 +65,23 @@ export interface MccRow {
   value_cr: number;
 }
 
+export interface CircularActionItem {
+  action: string;
+  owner: string;
+  deadline: string | null;
+}
+
+/** Structured "smart summary" payload — see docs/circular-smart-summary-plan.md. */
+export interface CircularSummary {
+  tldr: string;
+  category: string;
+  audience: string[];
+  effective_date: string | null;
+  action_items: CircularActionItem[];
+  references: string[];
+  supersedes_note: string | null;
+}
+
 /** One row from npci_circulars — an official NPCI UPI operating circular. */
 export interface CircularRow {
   id: number;
@@ -82,6 +99,14 @@ export interface CircularRow {
   storage_path: string | null;
   /** Original NPCI URL of the PDF. */
   source_url: string | null;
+  /** Full structured summary — only selected on the detail-page fetch. */
+  summary?: CircularSummary | null;
+  summary_model?: string | null;
+  summary_at?: string | null;
+  summary_status?: "pending" | "done" | "failed" | "skipped";
+  /** Scoped summary keys selected on the list page (keep paginated payload small). */
+  summary_category?: string | null;
+  summary_action_items?: CircularActionItem[] | null;
 }
 
 export const MONTHS = [

@@ -1,8 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { CircularTextView } from "@/components/upi/circulars/CircularTextView";
+import { SmartSummaryCard } from "@/components/upi/circulars/SmartSummaryCard";
 import { useCircular } from "@/lib/upi/hooks";
 import { circularDisplayName } from "@/lib/upi/circularText";
 import { supabase } from "@/lib/supabase";
@@ -90,14 +91,10 @@ function CircularDetailPage() {
               <FileText className="size-3.5" /> View original PDF
             </a>
           )}
-          <span
-            title="Smart summary is coming soon"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-foreground/10 text-xs font-medium text-muted-foreground cursor-not-allowed"
-          >
-            <Sparkles className="size-3.5" /> Summary — coming soon
-          </span>
         </div>
       </BentoCard>
+
+      <SmartSummaryCard circular={circular} />
 
       <BentoCard>
         <CardLabel>Circular text</CardLabel>

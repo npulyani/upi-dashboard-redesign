@@ -74,6 +74,20 @@ export function circularDisplayName(
   return row.oc_name ?? deriveOcName(row.content_text) ?? row.doc_reference ?? row.file_name;
 }
 
+// ── Smart summary ─────────────────────────────────────────────────────────────
+
+/**
+ * Whether an action-item deadline string parses to a date in the future.
+ * Deadlines are free text extracted verbatim from the circular ("by
+ * 31.03.2025", "within 90 days") — only ones that parse as an actual date
+ * get the urgency treatment; everything else (or no deadline) is muted.
+ */
+export function isFutureDeadline(deadline: string | null): boolean {
+  if (!deadline) return false;
+  const parsed = Date.parse(deadline);
+  return Number.isFinite(parsed) && parsed > Date.now();
+}
+
 // ── Search snippets ───────────────────────────────────────────────────────────
 
 const STOPWORDS = new Set([

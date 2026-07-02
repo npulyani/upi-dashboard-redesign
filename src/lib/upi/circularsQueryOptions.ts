@@ -6,8 +6,15 @@ const HOUR = 60 * 60 * 1000;
 
 export const CIRCULARS_PAGE_SIZE = 20;
 
-const CIRCULAR_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url";
+// List page: keep the paginated payload small — only the two scoped summary
+// keys the row line renders (category badge + action-item deadline chip),
+// not the full jsonb.
+const CIRCULAR_LIST_COLUMNS =
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url, summary_category:summary->>category, summary_action_items:summary->action_items";
+
+// Detail page: single-row fetch, fine to pull the full summary jsonb.
+const CIRCULAR_DETAIL_COLUMNS =
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url, summary, summary_model, summary_at, summary_status";
 
 export type SearchQuery =
   | { mode: "oc_number"; base: string; full: string | null }
@@ -83,10 +90,12 @@ async function fetchCircularsPage({
   pageParam,
   year,
   search,
+  category,
 }: {
   pageParam: number;
   year: number | null;
   search: SearchQuery | null;
+  category: string | null;
 }): Promise<CircularRow[]> {
   // Free-text queries go through the search_circulars RPC (see
   // supabase/migrations/add_circular_oc_name_and_search.sql): relevance-ranked
@@ -99,6 +108,7 @@ async function fetchCircularsPage({
       filter_year: year,
       page_offset: pageParam,
       page_size: CIRCULARS_PAGE_SIZE,
+      filter_category: category,
     });
     if (error) throw error;
     return (data ?? []) as CircularRow[];
@@ -106,7 +116,7 @@ async function fetchCircularsPage({
 
   let q = supabase
     .from("npci_circulars")
-    .select(CIRCULAR_COLUMNS)
+    .select(CIRCULAR_LIST_COLUMNS)
     .order("doc_date", { ascending: false, nullsFirst: false })
     .range(pageParam, pageParam + CIRCULARS_PAGE_SIZE - 1);
 
@@ -118,13 +128,20 @@ async function fetchCircularsPage({
   if (search?.mode === "oc_number") {
     q = q.eq("oc_base", search.base);
   }
+  if (category != null) {
+    q = q.eq("summary->>category", category);
+  }
 
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as CircularRow[];
 }
 
-export function circularsInfiniteQuery(year: number | null, search: SearchQuery | null) {
+export function circularsInfiniteQuery(
+  year: number | null,
+  search: SearchQuery | null,
+  category: string | null = null,
+) {
   return infiniteQueryOptions({
     queryKey: [
       "upi",
@@ -132,8 +149,9 @@ export function circularsInfiniteQuery(year: number | null, search: SearchQuery 
       year ?? "all",
       search?.mode ?? "none",
       search?.mode === "oc_number" ? search.base : (search?.term ?? ""),
+      category ?? "all",
     ],
-    queryFn: ({ pageParam }) => fetchCircularsPage({ pageParam, year, search }),
+    queryFn: ({ pageParam }) => fetchCircularsPage({ pageParam, year, search, category }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length < CIRCULARS_PAGE_SIZE ? undefined : allPages.length * CIRCULARS_PAGE_SIZE,
@@ -168,7 +186,7 @@ export function circularRouteKey(row: Pick<CircularRow, "oc_number" | "id">): st
 
 async function fetchCircularByKey(key: string): Promise<CircularRow | null> {
   const idMatch = key.match(/^id-(\d+)$/);
-  const q = supabase.from("npci_circulars").select(CIRCULAR_COLUMNS);
+  const q = supabase.from("npci_circulars").select(CIRCULAR_DETAIL_COLUMNS);
   const { data, error } = idMatch
     ? await q.eq("id", Number(idMatch[1])).maybeSingle()
     : await q.eq("oc_number", key).maybeSingle();
