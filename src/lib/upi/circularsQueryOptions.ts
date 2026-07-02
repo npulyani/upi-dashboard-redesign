@@ -52,7 +52,7 @@ export interface GroupedCircular {
  * Groups rows sharing an oc_base (a circular + its addenda) under one parent
  * row. "date" orders groups newest-first (the browse view); "relevance" keeps
  * the incoming row order, which for keyword searches is the server's
- * ts_rank_cd ordering.
+ * doc_date-descending order (search_circulars has no relevance ranking).
  */
 export function groupCirculars(
   rows: CircularRow[],
@@ -98,10 +98,9 @@ async function fetchCircularsPage({
   category: string | null;
 }): Promise<CircularRow[]> {
   // Free-text queries go through the search_circulars RPC (see
-  // supabase/migrations/add_circular_oc_name_and_search.sql): relevance-ranked
-  // websearch over the content, with an OR fallback so conversational queries
-  // ("what are the rules for autopay mandates") still surface the closest
-  // circulars instead of AND-ing themselves into zero results.
+  // supabase/migrations/simplify_circular_search.sql): a plain
+  // case-insensitive substring match against the OC name (title), file name,
+  // and content text.
   if (search?.mode === "keyword") {
     const { data, error } = await supabase.rpc("search_circulars", {
       search_query: search.term,

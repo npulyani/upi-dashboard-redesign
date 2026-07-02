@@ -15,14 +15,13 @@ export function CircularSearchBox({
           type="search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder='Ask in plain English — "volume cap for third party apps"…'
+          placeholder="Search by circular name or keyword…"
           className="bg-transparent outline-none text-sm sm:text-lg w-full placeholder:text-muted-foreground"
         />
       </div>
       <p className="mt-2 px-1 text-xs text-muted-foreground hidden sm:block">
-        Searches the full text of every circular — describe a topic in your own words, or jump
-        straight to a reference like <span className="font-mono">193</span> or{" "}
-        <span className="font-mono">OC 193A</span>.
+        Matches the circular name and full text, or jump straight to a reference like{" "}
+        <span className="font-mono">193</span> or <span className="font-mono">OC 193A</span>.
       </p>
     </div>
   );
