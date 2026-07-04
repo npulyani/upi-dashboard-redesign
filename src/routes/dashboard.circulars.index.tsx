@@ -5,9 +5,14 @@ import { CircularSearchBox } from "@/components/upi/circulars/CircularSearchBox"
 import { CircularYearPills } from "@/components/upi/circulars/CircularYearPills";
 import { CircularCategoryPills } from "@/components/upi/circulars/CircularCategoryPills";
 import { CircularListItem } from "@/components/upi/circulars/CircularListItem";
-import { useCircularsInfinite, useCircularYears } from "@/lib/upi/hooks";
+import {
+  useCircularFamily,
+  useCircularsInfinite,
+  useCircularsSearch,
+  useCircularYears,
+} from "@/lib/upi/hooks";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import { classifySearch, groupCirculars } from "@/lib/upi/circularsQueryOptions";
+import { classifySearch } from "@/lib/upi/circularsQueryOptions";
 import { analytics } from "@/lib/analytics";
 
 export const Route = createFileRoute("/dashboard/circulars/")({
@@ -23,22 +28,53 @@ export const Route = createFileRoute("/dashboard/circulars/")({
   component: CircularsPage,
 });
 
+// Keyword results are fully local, so "pagination" is just a render cap that
+// the scroll sentinel bumps.
+const SEARCH_RENDER_CHUNK = 50;
+
 function CircularsPage() {
   const [rawSearch, setRawSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(rawSearch, 350);
+  // Keyword search is an in-memory index lookup — the short debounce only
+  // smooths render churn, there's no network round-trip behind it.
+  const debouncedSearch = useDebouncedValue(rawSearch, 120);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  // Flips true on first focus of the search box, prefetching the corpus so
+  // the index is usually ready by the first keystroke.
+  const [searchIntent, setSearchIntent] = useState(false);
 
   const searchQuery = useMemo(() => classifySearch(debouncedSearch), [debouncedSearch]);
-  const years = useCircularYears();
-  const { rows, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useCircularsInfinite(selectedYear, searchQuery, selectedCategory);
   const isKeywordSearch = searchQuery?.mode === "keyword";
-  const groups = useMemo(
-    () => groupCirculars(rows, isKeywordSearch ? "relevance" : "date"),
-    [rows, isKeywordSearch],
+  const years = useCircularYears();
+  const family = useCircularFamily();
+
+  // Browse + OC-number lookup stay on the paginated DB query; keyword mode
+  // pauses it and searches the client-side corpus instead.
+  const dbSearch = searchQuery?.mode === "oc_number" ? searchQuery : null;
+  const db = useCircularsInfinite(selectedYear, dbSearch, selectedCategory, !isKeywordSearch);
+  const local = useCircularsSearch(
+    isKeywordSearch ? searchQuery.term : "",
+    selectedYear,
+    selectedCategory,
+    searchIntent || isKeywordSearch,
   );
+
+  // Every row (primary or addendum) is its own list entry, already sorted —
+  // doc_date-desc from the DB for browse, BM25 relevance for keyword search.
+  const rows = isKeywordSearch ? local.rows : db.rows;
+
+  const [visibleCount, setVisibleCount] = useState(SEARCH_RENDER_CHUNK);
+  useEffect(() => {
+    setVisibleCount(SEARCH_RENDER_CHUNK);
+  }, [debouncedSearch, selectedYear, selectedCategory]);
+  const visibleRows = isKeywordSearch ? rows.slice(0, visibleCount) : rows;
+
+  const isPending = isKeywordSearch ? local.isLoadingEngine : db.isPending;
+  const isError = isKeywordSearch ? local.isError : db.isError;
+  const errorMessage = isKeywordSearch
+    ? "Search is unavailable right now — try again in a moment."
+    : ((db.error as { message?: string } | null)?.message ?? "Unknown error");
+  const hasMore = isKeywordSearch ? rows.length > visibleCount : db.hasNextPage;
 
   useEffect(() => {
     analytics.circularsPageViewed();
@@ -51,31 +87,25 @@ function CircularsPage() {
   }, [debouncedSearch, searchQuery]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const { fetchNextPage, isFetchingNextPage } = db;
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+        if (!entry.isIntersecting || !hasMore) return;
+        if (isKeywordSearch) setVisibleCount((c) => c + SEARCH_RENDER_CHUNK);
+        else if (!isFetchingNextPage) fetchNextPage();
       },
       { rootMargin: "200px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasMore, isKeywordSearch, isFetchingNextPage, fetchNextPage]);
 
   function handleYearSelect(year: number | null) {
     analytics.circularYearFilterChanged(year);
     setSelectedYear(year);
-  }
-
-  function toggleExpand(key: string) {
-    setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   }
 
   return (
@@ -97,26 +127,29 @@ function CircularsPage() {
         </p>
       </div>
 
-      {/* Hidden for now — search has a known issue, re-enable once fixed. */}
-      {/* <CircularSearchBox value={rawSearch} onChange={setRawSearch} /> */}
+      <CircularSearchBox
+        value={rawSearch}
+        onChange={setRawSearch}
+        onFocus={() => setSearchIntent(true)}
+      />
 
       <CircularYearPills years={years} selected={selectedYear} onSelect={handleYearSelect} />
 
       <CircularCategoryPills selected={selectedCategory} onSelect={setSelectedCategory} />
 
       <BentoCard className="!p-0 overflow-hidden">
-        {isPending && groups.length === 0 ? (
+        {isPending && rows.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground font-mono text-xs uppercase tracking-widest">
-            Loading…
+            {isKeywordSearch ? "Loading search…" : "Loading…"}
           </div>
         ) : isError ? (
           <div className="p-8">
-            <h3 className="font-serif text-2xl">Couldn&apos;t load circulars</h3>
-            <p className="mt-2 text-sm text-muted-foreground font-mono">
-              {(error as { message?: string } | null)?.message ?? "Unknown error"}
-            </p>
+            <h3 className="font-serif text-2xl">
+              {isKeywordSearch ? "Couldn’t search circulars" : "Couldn’t load circulars"}
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground font-mono">{errorMessage}</p>
           </div>
-        ) : groups.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div className="p-8">
             <h3 className="font-serif text-2xl">No circulars found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -125,12 +158,11 @@ function CircularsPage() {
           </div>
         ) : (
           <div className="p-3">
-            {groups.map((group) => (
+            {visibleRows.map((row) => (
               <CircularListItem
-                key={group.key}
-                group={group}
-                expanded={expandedKeys.has(group.key)}
-                onToggleExpand={() => toggleExpand(group.key)}
+                key={row.id}
+                row={row}
+                family={family}
                 highlightTerm={isKeywordSearch ? searchQuery.term : undefined}
               />
             ))}
@@ -139,7 +171,7 @@ function CircularsPage() {
       </BentoCard>
 
       <div ref={sentinelRef} className="h-10 flex items-center justify-center">
-        {isFetchingNextPage && (
+        {!isKeywordSearch && isFetchingNextPage && (
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Loading more…
           </span>

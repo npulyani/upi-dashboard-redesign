@@ -6,11 +6,13 @@ const HOUR = 60 * 60 * 1000;
 
 export const CIRCULARS_PAGE_SIZE = 20;
 
-// List page: keep the paginated payload small — only the two scoped summary
-// keys the row line renders (category badge + action-item deadline chip),
-// not the full jsonb.
+// List page: keep the paginated payload small — no content_text (it made
+// every page ~90KB+; keyword-search snippets now come from the client-side
+// corpus, see circularsSearch.ts) and only the two scoped summary keys the
+// row line renders (category badge + action-item deadline chip), not the
+// full jsonb.
 const CIRCULAR_LIST_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url, summary_category:summary->>category, summary_action_items:summary->action_items";
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, summary_category:summary->>category, summary_action_items:summary->action_items";
 
 // Detail page: single-row fetch, fine to pull the full summary jsonb.
 const CIRCULAR_DETAIL_COLUMNS =
@@ -41,50 +43,36 @@ export function classifySearch(raw: string): SearchQuery | null {
   return { mode: "keyword", term: trimmed };
 }
 
-export interface GroupedCircular {
-  key: string;
-  parent: CircularRow;
-  children: CircularRow[];
-  effectiveDate: string | null;
+// Addenda are no longer nested/hidden under their parent — every row (primary
+// or addendum) is its own top-level list entry, sorted by its own doc_date.
+// This lightweight index is the cross-reference: a full-table scan of just
+// the columns needed to link a primary <-> its addenda in either direction,
+// cached long-lived like circularYearsQuery. Reused as-is on both the list
+// page (badges) and the detail page (banner/section) — one query, one cache
+// entry, React Query dedupes it.
+export interface CircularFamilyMember {
+  oc_number: string;
+  oc_base: string;
+  oc_name: string | null;
+  doc_date: string | null;
 }
 
-/**
- * Groups rows sharing an oc_base (a circular + its addenda) under one parent
- * row. "date" orders groups newest-first (the browse view); "relevance" keeps
- * the incoming row order, which for keyword searches is the server's
- * doc_date-descending order (search_circulars has no relevance ranking).
- */
-export function groupCirculars(
-  rows: CircularRow[],
-  order: "date" | "relevance" = "date",
-): GroupedCircular[] {
-  const byBase = new Map<string, CircularRow[]>();
-  for (const row of rows) {
-    const key = row.oc_base ?? row.oc_number ?? String(row.id);
-    const list = byBase.get(key);
-    if (list) list.push(row);
-    else byBase.set(key, [row]);
-  }
-
-  const groups: GroupedCircular[] = Array.from(byBase.entries()).map(([key, group]) => {
-    const parent =
-      group.find((r) => r.oc_number === r.oc_base) ??
-      [...group].sort((a, b) => (a.doc_date ?? "9999-12-31").localeCompare(b.doc_date ?? "9999-12-31"))[0];
-    const children = group.filter((r) => r !== parent);
-    const effectiveDate = parent.doc_date ?? children.find((c) => c.doc_date)?.doc_date ?? null;
-    return { key, parent, children, effectiveDate };
-  });
-
-  // Map preserves insertion order, i.e. first appearance in the ranked rows.
-  if (order === "relevance") return groups;
-
-  return groups.sort((a, b) => {
-    if (!a.effectiveDate && !b.effectiveDate) return 0;
-    if (!a.effectiveDate) return 1;
-    if (!b.effectiveDate) return -1;
-    return b.effectiveDate.localeCompare(a.effectiveDate);
-  });
+async function fetchCircularFamilyIndex(): Promise<CircularFamilyMember[]> {
+  const { data, error } = await supabase
+    .from("npci_circulars")
+    .select("oc_number, oc_base, oc_name, doc_date")
+    .not("oc_number", "is", null)
+    .not("oc_base", "is", null);
+  if (error) throw error;
+  return (data ?? []) as CircularFamilyMember[];
 }
+
+export const circularFamilyIndexQuery = () =>
+  queryOptions({
+    queryKey: ["upi", "circularFamilyIndex"],
+    queryFn: fetchCircularFamilyIndex,
+    staleTime: 24 * HOUR,
+  });
 
 async function fetchCircularsPage({
   pageParam,
@@ -97,22 +85,9 @@ async function fetchCircularsPage({
   search: SearchQuery | null;
   category: string | null;
 }): Promise<CircularRow[]> {
-  // Free-text queries go through the search_circulars RPC (see
-  // supabase/migrations/simplify_circular_search.sql): a plain
-  // case-insensitive substring match against the OC name (title), file name,
-  // and content text.
-  if (search?.mode === "keyword") {
-    const { data, error } = await supabase.rpc("search_circulars", {
-      search_query: search.term,
-      filter_year: year,
-      page_offset: pageParam,
-      page_size: CIRCULARS_PAGE_SIZE,
-      filter_category: category,
-    });
-    if (error) throw error;
-    return (data ?? []) as CircularRow[];
-  }
-
+  // Browse + OC-number lookup only. Free-text keyword search never reaches
+  // this query — it runs entirely in the browser over the downloaded corpus
+  // (circularsSearch.ts / useCircularsSearch).
   let q = supabase
     .from("npci_circulars")
     .select(CIRCULAR_LIST_COLUMNS)

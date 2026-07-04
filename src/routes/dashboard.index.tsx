@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
@@ -6,6 +6,9 @@ import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankMovers } from "@/components/upi/RankMovers";
 import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
+import { TrajectoryCard } from "@/components/upi/trends/TrajectoryCard";
+import { PremiumnessCard } from "@/components/upi/trends/PremiumnessCard";
+import { TicketSizeCard } from "@/components/upi/trends/TicketSizeCard";
 import {
   AVAILABLE_MONTHS,
   getPreviousMonth,
@@ -13,12 +16,14 @@ import {
   formatIndianNumber,
 } from "@/lib/upi/queries";
 import {
+  multiAppTrendFrom,
   useAllMonths,
   useMccData,
   useMonthData,
   usePopulations,
   useSeasonalityMatrix,
   useStatewise,
+  useUniqueApps,
 } from "@/lib/upi/hooks";
 import { calcPerCapita, calcSpendsPerCapita } from "@/lib/upi/population";
 import { generateNarrative } from "@/lib/upi/insights";
@@ -43,6 +48,7 @@ const EMPTY_POPULATIONS = new Map<string, number>();
 function OverviewPage() {
   const { year, month, metric } = useDashboard();
   const [mapMetric, setMapMetric] = useState<MapMetric>("volume");
+  const [selected, setSelected] = useState<string[]>([]);
 
   const { rows: current, isPending: loading } = useMonthData(year, month);
   const prevM = getPreviousMonth(year, month);
@@ -51,6 +57,28 @@ function OverviewPage() {
   const populations = usePopulations() ?? EMPTY_POPULATIONS;
   const { allMonths } = useAllMonths();
   const seasonalityMatrix = useSeasonalityMatrix(metric);
+  const allApps = useUniqueApps();
+
+  const trendRows = useMemo(
+    () =>
+      allMonths.length && selected.length
+        ? multiAppTrendFrom(allMonths, selected, 24, year, month)
+        : [],
+    [allMonths, selected, year, month],
+  );
+
+  // Default selection: top-3 apps by volume, set once when data first arrives
+  const defaultsSet = useRef(false);
+  useEffect(() => {
+    if (defaultsSet.current || selected.length > 0 || !current.length) return;
+    defaultsSet.current = true;
+    setSelected(
+      [...current]
+        .sort((a, b) => b.cit_volume_mn - a.cit_volume_mn)
+        .slice(0, 3)
+        .map((r) => r.app_name),
+    );
+  }, [current, selected.length]);
 
   // Last-12-months ecosystem total, derived from the shared history
   const ecosystemTrend = useMemo(() => {
@@ -428,6 +456,15 @@ function OverviewPage() {
           <SeasonalityHeatmap matrix={seasonalityMatrix} />
         </BentoCard>
       )}
+
+      <TrajectoryCard
+        selected={selected}
+        onChangeSelected={setSelected}
+        allApps={allApps}
+        trendRows={trendRows}
+      />
+      <PremiumnessCard current={current} />
+      <TicketSizeCard selected={selected} trendRows={trendRows} current={current} />
     </div>
   );
 }

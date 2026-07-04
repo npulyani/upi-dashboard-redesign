@@ -3,9 +3,12 @@ import { Search } from "lucide-react";
 export function CircularSearchBox({
   value,
   onChange,
+  onFocus,
 }: {
   value: string;
   onChange: (v: string) => void;
+  /** Fired on first focus — used to prefetch the client-side search corpus. */
+  onFocus?: () => void;
 }) {
   return (
     <div>
@@ -15,6 +18,7 @@ export function CircularSearchBox({
           type="search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
           placeholder="Search by circular name or keyword…"
           className="bg-transparent outline-none text-sm sm:text-lg w-full placeholder:text-muted-foreground"
         />

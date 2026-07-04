@@ -12,3 +12,7 @@ CREATE TABLE IF NOT EXISTS upi_statewise_data (
   created_at            timestamptz DEFAULT now(),
   UNIQUE (year, month, state_union_territory)
 );
+
+ALTER TABLE upi_statewise_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public read" ON upi_statewise_data;
+CREATE POLICY "public read" ON upi_statewise_data FOR SELECT USING (true);

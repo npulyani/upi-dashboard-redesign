@@ -1,12 +1,11 @@
 /**
- * Per-month update: fetches statewise (and district-level) UPI statistics
- * from NPCI for a specific month/year and upserts into upi_statewise_data.
- * For the full Jan 2021 → latest history, use fetch_statewise_all.mjs.
+ * Bulk backfill: fetches statewise (and district-level) UPI statistics from
+ * NPCI for all months Jan 2021 → May 2026 and upserts into
+ * upi_statewise_data. For a single month, use fetch_statewise.mjs instead.
  *
  * Usage:
- *   node scripts/fetch_statewise.mjs --year 2026 --month May [--dry-run]
+ *   node scripts/fetch_statewise_all.mjs [--dry-run]
  *
- * Defaults to May 2026 (latest available month) if args omitted.
  * Reads credentials from .env.local (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY).
  * RLS must be disabled on upi_statewise_data for the anon key to write.
  */
@@ -52,36 +51,23 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   realtime: { transport: ws },
 });
 
+const DRY_RUN = process.argv.includes("--dry-run");
+
 // ---------------------------------------------------------------------------
-// Args
+// Month list: Jan 2021 → Apr 2026 (matches AVAILABLE_MONTHS in queries.ts)
 // ---------------------------------------------------------------------------
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let year = 2026;
-  let month = "May";
-  let dryRun = false;
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--year" && args[i + 1]) year = parseInt(args[++i], 10);
-    else if (args[i] === "--month" && args[i + 1]) month = args[++i];
-    else if (args[i] === "--dry-run") dryRun = true;
+function buildMonthList() {
+  const out = [];
+  for (let y = 2021; y <= 2026; y++) {
+    const lastMonth = y === 2026 ? 5 : 12;
+    for (let m = 1; m <= lastMonth; m++) {
+      out.push({ year: y, month: MONTH_ABBR[m - 1], month_num: m });
+    }
   }
-
-  const month_num = MONTH_ABBR.indexOf(month) + 1;
-  if (month_num === 0) {
-    console.error(`Unknown month: "${month}". Use 3-letter abbreviation (Jan, Feb, … Dec).`);
-    process.exit(1);
-  }
-  if (isNaN(year) || year < 2021 || year > 2030) {
-    console.error(`Invalid year: ${year}`);
-    process.exit(1);
-  }
-  return { year, month, month_num, dryRun };
+  return out;
 }
-
-const { year, month, month_num, dryRun: DRY_RUN } = parseArgs();
 
 // ---------------------------------------------------------------------------
 // NPCI API helpers
@@ -155,67 +141,74 @@ function buildRow(year, month, month_num, r, districtOverride) {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-console.log(`${DRY_RUN ? "[DRY RUN] " : ""}Fetching statewise data for ${month} ${year} …`);
+const months = buildMonthList();
+let totalInserted = 0;
 
-let rows_raw, isDistrict;
-try {
-  ({ rows: rows_raw, isDistrict } = await fetchAllRows(year, month));
-} catch (err) {
-  console.error(`Fetch failed: ${err.message}`);
-  process.exit(1);
-}
+console.log(`Fetching ${months.length} months (${months[0].month} ${months[0].year} → ${months.at(-1).month} ${months.at(-1).year})\n`);
 
-if (rows_raw.length === 0) {
-  console.warn("No data returned from API.");
-  process.exit(0);
-}
+for (const { year, month, month_num } of months) {
+  process.stdout.write(`  ${month} ${year} … `);
 
-let rows;
-if (!isDistrict) {
-  // Statewise month: deduplicate by state (guard against API returning duplicates)
-  const seen = new Map();
-  for (const r of rows_raw) {
-    const key = r.state_union_territory;
-    if (!seen.has(key)) seen.set(key, buildRow(year, month, month_num, r, ""));
+  let rows_raw, isDistrict;
+  try {
+    ({ rows: rows_raw, isDistrict } = await fetchAllRows(year, month));
+  } catch (err) {
+    console.error(`FETCH ERROR: ${err.message}`);
+    continue;
   }
-  rows = Array.from(seen.values());
-} else {
-  // District month: store district rows AND state-total rows separately.
-  // - District rows: district = district name (non-empty)
-  // - Total rows: state_union_territory contains "Total", district stored as ""
-  const seen = new Map();
-  for (const r of rows_raw) {
-    const isTotal = r.state_union_territory.toLowerCase().includes("total");
-    const district = isTotal ? "" : (r.district ?? "");
-    const key = `${r.state_union_territory}||${district}`;
-    if (!seen.has(key)) seen.set(key, buildRow(year, month, month_num, r, district));
+
+  if (rows_raw.length === 0) {
+    console.warn("no data");
+    continue;
   }
-  rows = Array.from(seen.values());
-}
 
-const districtLabel = isDistrict
-  ? ` (district-level, ${rows.filter((r) => r.district).length} districts + ${rows.filter((r) => !r.district).length} totals)`
-  : " (state-level)";
-
-console.log(`Fetched ${rows.length} rows${districtLabel}.\n`);
-
-if (DRY_RUN) {
-  console.log(`[DRY-RUN] Would upsert ${rows.length} rows — no DB write.`);
-  const stateRows = rows.filter((r) => !r.district);
-  const top = [...stateRows].sort((a, b) => (b.volume_in_mn ?? 0) - (a.volume_in_mn ?? 0)).slice(0, 10);
-  for (const r of top) {
-    console.log(`  ${r.state_union_territory.padEnd(28)} vol ${(r.volume_in_mn ?? 0).toFixed(2)} mn   val ${(r.value_in_cr ?? 0).toFixed(2)} cr`);
+  let rows;
+  if (!isDistrict) {
+    // Statewise month: deduplicate by state (guard against API returning duplicates)
+    const seen = new Map();
+    for (const r of rows_raw) {
+      const key = r.state_union_territory;
+      if (!seen.has(key)) seen.set(key, buildRow(year, month, month_num, r, ""));
+    }
+    rows = Array.from(seen.values());
+  } else {
+    // District month: store district rows AND state-total rows separately.
+    // - District rows: district = district name (non-empty)
+    // - Total rows: state_union_territory contains "Total", district stored as ""
+    const seen = new Map();
+    for (const r of rows_raw) {
+      const isTotal = r.state_union_territory.toLowerCase().includes("total");
+      const district = isTotal ? "" : (r.district ?? "");
+      const key = `${r.state_union_territory}||${district}`;
+      if (!seen.has(key)) seen.set(key, buildRow(year, month, month_num, r, district));
+    }
+    rows = Array.from(seen.values());
   }
-  process.exit(0);
+
+  const districtLabel = isDistrict ? ` (district-level, ${rows.filter(r => r.district).length} districts + ${rows.filter(r => !r.district).length} totals)` : " (state-level)";
+
+  if (DRY_RUN) {
+    console.log(`[DRY-RUN] ${rows.length} rows${districtLabel} — no DB write`);
+    const stateRows = rows.filter((r) => !r.district);
+    const top = [...stateRows].sort((a, b) => (b.volume_in_mn ?? 0) - (a.volume_in_mn ?? 0)).slice(0, 10);
+    for (const r of top) {
+      console.log(`    ${r.state_union_territory.padEnd(28)} vol ${(r.volume_in_mn ?? 0).toFixed(2)} mn   val ${(r.value_in_cr ?? 0).toFixed(2)} cr`);
+    }
+    totalInserted += rows.length;
+  } else {
+    const { error } = await supabase
+      .from("upi_statewise_data")
+      .upsert(rows, { onConflict: "year,month,state_union_territory,district" });
+
+    if (error) {
+      console.error(`UPSERT ERROR: ${error.message}`);
+    } else {
+      console.log(`${rows.length} rows${districtLabel}`);
+      totalInserted += rows.length;
+    }
+  }
+
+  await new Promise((r) => setTimeout(r, 200));
 }
 
-const { error } = await supabase
-  .from("upi_statewise_data")
-  .upsert(rows, { onConflict: "year,month,state_union_territory,district" });
-
-if (error) {
-  console.error(`UPSERT ERROR: ${error.message}`);
-  process.exit(1);
-}
-
-console.log(`Upserted ${rows.length} rows${districtLabel} for ${month} ${year}.`);
+console.log(`\nDone. ${totalInserted} rows upserted.`);

@@ -30,7 +30,7 @@ function cleanSubject(raw: string): string | null {
   return subject.length > 200 ? subject.slice(0, 197).trimEnd() + "…" : subject;
 }
 
-export function deriveOcName(contentText: string | null): string | null {
+export function deriveOcName(contentText: string | null | undefined): string | null {
   if (!contentText) return null;
   const head = contentText.slice(0, 3000);
 
@@ -156,10 +156,13 @@ function escapeRegExp(s: string): string {
 /**
  * A short window of the circular text around the first occurrence of any
  * significant query term, split into highlight/plain parts. Terms are crudely
- * de-suffixed (mandates → mandat…) so client highlighting roughly follows the
- * server's stemmed full-text match. Null when nothing matches.
+ * de-suffixed (mandates → mandat…) so client highlighting roughly follows
+ * MiniSearch's stemless prefix match. Null when nothing matches.
  */
-export function deriveSnippet(contentText: string | null, term: string): SnippetPart[] | null {
+export function deriveSnippet(
+  contentText: string | null | undefined,
+  term: string,
+): SnippetPart[] | null {
   if (!contentText || !term.trim()) return null;
   const tokens = term
     .toLowerCase()

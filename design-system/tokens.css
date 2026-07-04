@@ -1,0 +1,146 @@
+/**
+ * Design tokens — extracted from the live codebase.
+ *
+ * Source of truth for colors/radii/fonts is src/styles.css (Tailwind v4,
+ * @theme inline + CSS custom properties, shadcn "new-york" style).
+ * This file does NOT replace styles.css — it is a single reference copy of
+ * every token that already exists, plus a small "proposed" section for
+ * values that recur across components but currently have no token (see
+ * design-system/AUDIT.md, section "Un-tokenized recurring values").
+ *
+ * Every value below was copied verbatim from src/styles.css or measured
+ * directly from component usage. Nothing here is invented.
+ */
+
+/* ============================================================
+   1. EXISTING TOKENS (from src/styles.css — do not duplicate,
+      this is a reference copy for the design-system doc set)
+   ============================================================ */
+
+:root {
+  /* Radius base — Tailwind v4 @theme derives radius-sm..4xl from this */
+  --radius: 0.625rem; /* 10px */
+
+  /* Surface & text */
+  --background: oklch(0.985 0.003 240); /* soft off-white */
+  --foreground: oklch(0.18 0.03 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 260);
+
+  /* Brand */
+  --primary: oklch(0.58 0.2 265); /* indigo */
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.96 0.01 260);
+  --secondary-foreground: oklch(0.18 0.03 260);
+  --muted: oklch(0.96 0.01 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.96 0.01 260);
+  --accent-foreground: oklch(0.18 0.03 260);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.92 0.005 260);
+  --input: oklch(0.92 0.005 260);
+  --ring: oklch(0.58 0.2 265);
+
+  /* Chart palette — used by recharts in MccTicketScatter, P2pP2mTrendChart,
+     PremiumnessCard, StateGrowthCard, TicketSizeCard, dashboard.app.$appName */
+  --chart-1: oklch(0.58 0.2 265);
+  --chart-2: oklch(0.65 0.18 30);
+  --chart-3: oklch(0.7 0.15 160);
+  --chart-4: oklch(0.65 0.2 305);
+  --chart-5: oklch(0.75 0.16 75);
+
+  /* Sidebar — defined, but sidebar.tsx is unused (see AUDIT.md) */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.18 0.03 260);
+  --sidebar-primary: oklch(0.58 0.2 265);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.01 260);
+  --sidebar-accent-foreground: oklch(0.18 0.03 260);
+  --sidebar-border: oklch(0.92 0.005 260);
+  --sidebar-ring: oklch(0.58 0.2 265);
+}
+
+.dark {
+  --background: oklch(0.13 0.02 260);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.18 0.03 260);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0.03 260);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.7 0.18 265);
+  --primary-foreground: oklch(0.13 0.02 260);
+  --secondary: oklch(0.25 0.03 260);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.03 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+  --accent: oklch(0.25 0.03 260);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.7 0.19 22);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.7 0.18 265);
+  --chart-1: oklch(0.7 0.18 265);
+  --chart-2: oklch(0.7 0.17 30);
+  --chart-3: oklch(0.75 0.15 160);
+  --chart-4: oklch(0.7 0.2 305);
+  --chart-5: oklch(0.78 0.16 75);
+}
+
+/* Radius scale — Tailwind v4 @theme inline, src/styles.css:8-14 */
+/* --radius-sm:  calc(var(--radius) - 4px)  = 6px  */
+/* --radius-md:  calc(var(--radius) - 2px)  = 8px  */
+/* --radius-lg:  var(--radius)              = 10px */
+/* --radius-xl:  calc(var(--radius) + 4px)  = 14px */
+/* --radius-2xl: calc(var(--radius) + 8px)  = 18px */
+/* --radius-3xl: calc(var(--radius) + 12px) = 22px */
+/* --radius-4xl: calc(var(--radius) + 16px) = 26px */
+
+/* Fonts — src/styles.css:48-50 */
+/* --font-serif: "Instrument Serif", ui-serif, Georgia, serif   → headline/hero numerals (font-serif) */
+/* --font-sans:  "Inter", ui-sans-serif, system-ui, sans-serif  → body default */
+/* --font-mono:  "JetBrains Mono", ui-monospace, monospace      → labels, stats, tabular numbers (font-mono) */
+
+/* ============================================================
+   2. RECURRING VALUES WITH NO TOKEN TODAY (found by grep across
+      src/components and src/routes — see AUDIT.md §2 for file lists)
+   ============================================================ */
+
+:root {
+  /* "Eyebrow" micro-label used by CardLabel (BentoCard.tsx) AND reimplemented
+     inline in 19+ other files as raw text-[10px]/[9px]/[11px] uppercase
+     tracking-widest font-mono. Proposed as a real token so every card can
+     reference one thing. */
+  --text-eyebrow-size: 10px; /* matches CardLabel; some files use 9px/11px ad hoc */
+  --tracking-eyebrow: 0.18em; /* ~= tracking-widest, matches BentoCard's inline 0.18em */
+
+  /* Positive/negative semantic colors — used consistently as an *idiom*
+     (emerald = up, rose = down) in 11 files (RankBadge, InsightCards,
+     PremiumnessCard, SeasonalityHeatmap, YearCalendar, StateMap,
+     P2mStatCards, dashboard.data/.index/.year/.app.$appName) but never
+     defined as a variable. Shades vary per call site (600/500/400/300/950
+     and /10, /80 opacity modifiers all appear). Proposed consolidation: */
+  --color-positive: oklch(0.6 0.15 155); /* ~ tailwind emerald-600 */
+  --color-positive-subtle: oklch(0.6 0.15 155 / 10%); /* emerald-500/10 badge bg */
+  --color-negative: oklch(0.6 0.19 15); /* ~ tailwind rose-600 */
+  --color-negative-subtle: oklch(0.6 0.19 15 / 10%); /* rose-500/10 badge bg */
+
+  /* BentoCard's own corner radius does not sit on the --radius scale at all
+     (28px vs. the nearest token --radius-4xl = 26px). Flag, don't silently
+     change — see AUDIT.md priority fixes. */
+  --radius-bento: 28px; /* BentoCard.tsx:28, only consumer of this value */
+}
+
+/* ============================================================
+   3. SPACING / SIZE SCALES IN USE (Tailwind default scale, confirmed by
+      grep frequency — no custom spacing scale is defined in styles.css,
+      so these are plain Tailwind v4 defaults, not custom tokens)
+   ============================================================ */
+/* Gap/space-y: 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6 (bare Tailwind scale) */
+/* Padding: 0.5, 1, 1.5, 2, 2.5, 3, 4, 6, 8, 10, 12 (bare Tailwind scale) */
+/* Card padding is consistently p-6 lg:p-8 (BentoCard) or p-6/p-4 (shadcn Card) */

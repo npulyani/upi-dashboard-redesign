@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, CornerDownRight, FileText } from "lucide-react";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { CircularTextView } from "@/components/upi/circulars/CircularTextView";
 import { SmartSummaryCard } from "@/components/upi/circulars/SmartSummaryCard";
-import { useCircular } from "@/lib/upi/hooks";
+import { useCircular, useCircularFamily } from "@/lib/upi/hooks";
 import { circularDisplayName } from "@/lib/upi/circularText";
 import { supabase } from "@/lib/supabase";
 import { analytics } from "@/lib/analytics";
@@ -29,6 +29,7 @@ function CircularDetailPage() {
   const { ocNumber } = Route.useParams();
   const decoded = decodeURIComponent(ocNumber);
   const { circular, isPending } = useCircular(decoded);
+  const family = useCircularFamily();
 
   useEffect(() => {
     analytics.circularOpened(decoded);
@@ -68,6 +69,13 @@ function CircularDetailPage() {
   const title = circularDisplayName(circular);
   const hasContent = circular.ocr_status === "done" && !!circular.content_text;
 
+  // Cross-reference, both directions — every circular (including addenda) is
+  // its own top-level list entry now, so this is the only place the
+  // parent/addenda relationship still shows.
+  const isAddendum = !!circular.oc_base && circular.oc_number !== circular.oc_base;
+  const parent = isAddendum ? family.byOcNumber.get(circular.oc_base!) : undefined;
+  const addenda = circular.oc_number ? family.addendaByBase.get(circular.oc_number) : undefined;
+
   return (
     <div className="space-y-5">
       <BackLink />
@@ -79,6 +87,34 @@ function CircularDetailPage() {
           {formatDocDate(circular.doc_date)}
           {circular.doc_reference ? ` · Ref ${circular.doc_reference}` : ""}
         </p>
+        {isAddendum && (
+          <Link
+            to="/dashboard/circulars/$ocNumber"
+            params={{ ocNumber: encodeURIComponent(circular.oc_base!) }}
+            className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <CornerDownRight className="size-3.5" /> Addendum to {circular.oc_base}
+            {parent?.oc_name ? ` — ${parent.oc_name}` : ""}
+          </Link>
+        )}
+        {addenda && addenda.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+            <CornerDownRight className="size-3.5 flex-shrink-0" />
+            <span>
+              {addenda.length} addend{addenda.length === 1 ? "um" : "a"}:
+            </span>
+            {addenda.map((a) => (
+              <Link
+                key={a.oc_number}
+                to="/dashboard/circulars/$ocNumber"
+                params={{ ocNumber: encodeURIComponent(a.oc_number) }}
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                {a.oc_number}
+              </Link>
+            ))}
+          </div>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {pdfUrl && (
             <a

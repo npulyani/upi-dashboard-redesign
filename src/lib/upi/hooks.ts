@@ -13,11 +13,14 @@ import {
   statewiseTrendQuery,
 } from "./queryOptions";
 import {
+  circularFamilyIndexQuery,
   circularQuery,
   circularsInfiniteQuery,
   circularYearsQuery,
+  CircularFamilyMember,
   SearchQuery,
 } from "./circularsQueryOptions";
+import { circularsSearchEngineQuery } from "./circularsSearch";
 import { AVAILABLE_MONTHS, LATEST_MONTH } from "./queries";
 import { buildSeasonalityMatrix } from "./insights";
 import { AppMonthData, CircularRow, MccRow, Metric, TrendPoint } from "./types";
@@ -90,15 +93,65 @@ export function useCircularsInfinite(
   year: number | null,
   search: SearchQuery | null,
   category: string | null = null,
+  enabled = true,
 ) {
-  const query = useInfiniteQuery(circularsInfiniteQuery(year, search, category));
+  const query = useInfiniteQuery({ ...circularsInfiniteQuery(year, search, category), enabled });
   const rows = useMemo(() => query.data?.pages.flat() ?? EMPTY_CIRCULARS, [query.data]);
   return { rows, ...query };
+}
+
+/**
+ * In-browser keyword search over the circulars corpus. The engine downloads
+ * lazily (pass enabled=true once the user shows search intent) and every
+ * search afterwards is a synchronous in-memory lookup — no DB round-trips.
+ */
+export function useCircularsSearch(
+  term: string,
+  year: number | null,
+  category: string | null,
+  enabled: boolean,
+) {
+  const { data: engine, isError } = useQuery({ ...circularsSearchEngineQuery(), enabled });
+  const rows = useMemo(
+    () => (engine && term ? engine.search(term, { year, category }) : EMPTY_CIRCULARS),
+    [engine, term, year, category],
+  );
+  return { rows, isLoadingEngine: enabled && !!term && !engine && !isError, isError };
 }
 
 export function useCircularYears() {
   const { data } = useQuery(circularYearsQuery());
   return data ?? EMPTY_YEARS;
+}
+
+export interface CircularFamily {
+  /** oc_number -> that row's own metadata (used to resolve a parent's title from an addendum). */
+  byOcNumber: Map<string, CircularFamilyMember>;
+  /** oc_base -> its addenda (excludes the primary itself). */
+  addendaByBase: Map<string, CircularFamilyMember[]>;
+}
+const EMPTY_FAMILY: CircularFamily = { byOcNumber: new Map(), addendaByBase: new Map() };
+
+/**
+ * Lightweight oc_number/oc_base index shared by the list page (addenda
+ * badges) and the detail page (parent/addenda cross-reference) — one query,
+ * built into two lookup directions.
+ */
+export function useCircularFamily(): CircularFamily {
+  const { data } = useQuery(circularFamilyIndexQuery());
+  return useMemo(() => {
+    if (!data) return EMPTY_FAMILY;
+    const byOcNumber = new Map<string, CircularFamilyMember>();
+    const addendaByBase = new Map<string, CircularFamilyMember[]>();
+    for (const r of data) {
+      byOcNumber.set(r.oc_number, r);
+      if (r.oc_number === r.oc_base) continue;
+      const list = addendaByBase.get(r.oc_base);
+      if (list) list.push(r);
+      else addendaByBase.set(r.oc_base, [r]);
+    }
+    return { byOcNumber, addendaByBase };
+  }, [data]);
 }
 
 export function useCircular(ocNumber: string) {

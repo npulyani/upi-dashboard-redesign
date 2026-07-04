@@ -95,7 +95,12 @@ export interface CircularRow {
   doc_date: string | null;
   query_year: number;
   ocr_status: "pending" | "done" | "failed";
-  content_text: string | null;
+  /**
+   * Full OCR'd text. Selected on the detail page and present in the search
+   * corpus (circularsSearch.ts); deliberately NOT selected on the paginated
+   * list so browse pages stay small.
+   */
+  content_text?: string | null;
   storage_path: string | null;
   /** Original NPCI URL of the PDF. */
   source_url: string | null;

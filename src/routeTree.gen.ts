@@ -13,7 +13,6 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardYearRouteImport } from './routes/dashboard.year'
-import { Route as DashboardTrendsRouteImport } from './routes/dashboard.trends'
 import { Route as DashboardSpendingRouteImport } from './routes/dashboard.spending'
 import { Route as DashboardMilestonesRouteImport } from './routes/dashboard.milestones'
 import { Route as DashboardDataRouteImport } from './routes/dashboard.data'
@@ -39,11 +38,6 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
 const DashboardYearRoute = DashboardYearRouteImport.update({
   id: '/year',
   path: '/year',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardTrendsRoute = DashboardTrendsRouteImport.update({
-  id: '/trends',
-  path: '/trends',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSpendingRoute = DashboardSpendingRouteImport.update({
@@ -84,7 +78,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/spending': typeof DashboardSpendingRoute
-  '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
@@ -96,7 +89,6 @@ export interface FileRoutesByTo {
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/spending': typeof DashboardSpendingRoute
-  '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
@@ -110,7 +102,6 @@ export interface FileRoutesById {
   '/dashboard/data': typeof DashboardDataRoute
   '/dashboard/milestones': typeof DashboardMilestonesRoute
   '/dashboard/spending': typeof DashboardSpendingRoute
-  '/dashboard/trends': typeof DashboardTrendsRoute
   '/dashboard/year': typeof DashboardYearRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/app/$appName': typeof DashboardAppAppNameRoute
@@ -125,7 +116,6 @@ export interface FileRouteTypes {
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/spending'
-    | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
@@ -137,7 +127,6 @@ export interface FileRouteTypes {
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/spending'
-    | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard'
     | '/dashboard/app/$appName'
@@ -150,7 +139,6 @@ export interface FileRouteTypes {
     | '/dashboard/data'
     | '/dashboard/milestones'
     | '/dashboard/spending'
-    | '/dashboard/trends'
     | '/dashboard/year'
     | '/dashboard/'
     | '/dashboard/app/$appName'
@@ -191,13 +179,6 @@ declare module '@tanstack/react-router' {
       path: '/year'
       fullPath: '/dashboard/year'
       preLoaderRoute: typeof DashboardYearRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/trends': {
-      id: '/dashboard/trends'
-      path: '/trends'
-      fullPath: '/dashboard/trends'
-      preLoaderRoute: typeof DashboardTrendsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/spending': {
@@ -249,7 +230,6 @@ interface DashboardRouteChildren {
   DashboardDataRoute: typeof DashboardDataRoute
   DashboardMilestonesRoute: typeof DashboardMilestonesRoute
   DashboardSpendingRoute: typeof DashboardSpendingRoute
-  DashboardTrendsRoute: typeof DashboardTrendsRoute
   DashboardYearRoute: typeof DashboardYearRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardAppAppNameRoute: typeof DashboardAppAppNameRoute
@@ -261,7 +241,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDataRoute: DashboardDataRoute,
   DashboardMilestonesRoute: DashboardMilestonesRoute,
   DashboardSpendingRoute: DashboardSpendingRoute,
-  DashboardTrendsRoute: DashboardTrendsRoute,
   DashboardYearRoute: DashboardYearRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardAppAppNameRoute: DashboardAppAppNameRoute,

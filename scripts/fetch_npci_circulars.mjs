@@ -160,6 +160,21 @@ if (!dryRun) {
   await ensureBucket(supabase);
 }
 
+// Snapshot existing npci_ids up front so the summary can tell genuinely new
+// circulars apart from idempotent re-upserts of already-stored ones.
+let existingIds = new Set();
+if (!dryRun) {
+  const { data, error } = await supabase
+    .from("npci_circulars")
+    .select("npci_id")
+    .range(0, 9999);
+  if (error) {
+    console.error(`Could not read existing npci_ids: ${error.message}`);
+    process.exit(1);
+  }
+  existingIds = new Set((data ?? []).map((r) => r.npci_id));
+}
+
 let grandTotal = 0;
 const allRows = [];
 
@@ -195,6 +210,19 @@ for (const year of years) {
 }
 
 console.log(`\nTotal kept: ${grandTotal}`);
+
+if (!dryRun) {
+  const newRows = allRows.filter((r) => !existingIds.has(r.npci_id));
+  if (newRows.length > 0) {
+    console.log(`\n${newRows.length} NEW circular(s): ${newRows.map((r) => r.oc_number ?? r.file_name).join(", ")}`);
+    console.log("Finish the pipeline so they show up and are searchable on /dashboard/circulars:");
+    console.log("  1. node scripts/ocr_npci_circulars.mjs");
+    console.log("  2. node scripts/summarize_npci_circulars.mjs");
+    console.log("  3. node scripts/build_circulars_search_corpus.mjs   <- search corpus, don't skip");
+  } else {
+    console.log("No new circulars — search corpus is still current.");
+  }
+}
 
 if (dryRun) {
   console.log(`\n${"OC".padEnd(10)} ${"Year".padEnd(8)} ${"FY".padEnd(9)} File`);

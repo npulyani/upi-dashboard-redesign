@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { circularRouteKey, GroupedCircular } from "@/lib/upi/circularsQueryOptions";
+import { CornerDownRight } from "lucide-react";
+import { circularRouteKey } from "@/lib/upi/circularsQueryOptions";
+import { CircularFamily } from "@/lib/upi/hooks";
 import { circularDisplayName, deriveSnippet, isFutureDeadline } from "@/lib/upi/circularText";
 import { CircularRow } from "@/lib/upi/types";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +16,13 @@ function formatDocDate(docDate: string | null): string {
   });
 }
 
-function CircularRowLine({
+export function CircularListItem({
   row,
-  indent,
+  family,
   highlightTerm,
 }: {
   row: CircularRow;
-  indent?: boolean;
+  family: CircularFamily;
   highlightTerm?: string;
 }) {
   const navigate = useNavigate();
@@ -34,6 +35,14 @@ function CircularRowLine({
   );
   const actionItems = row.summary_action_items ?? [];
   const hasFutureDeadline = actionItems.some((a) => isFutureDeadline(a.deadline));
+
+  // Cross-reference, both directions — the family index (not this row's
+  // own oc_base/oc_number alone) is what tells us whether this is an
+  // addendum or has addenda, since either side may sit far apart in the
+  // date-sorted list.
+  const isAddendum = !!row.oc_base && row.oc_number !== row.oc_base;
+  const parent = isAddendum ? family.byOcNumber.get(row.oc_base!) : undefined;
+  const addenda = row.oc_number ? family.addendaByBase.get(row.oc_number) : undefined;
 
   function open() {
     navigate({
@@ -53,9 +62,7 @@ function CircularRowLine({
           open();
         }
       }}
-      className={`flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] ${
-        indent ? "ml-6 border-l border-foreground/10 pl-4" : ""
-      }`}
+      className="flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4 py-3 px-3 rounded-xl cursor-pointer transition-colors hover:bg-foreground/[0.04] border-b border-foreground/[0.06] last:border-0"
     >
       <div className="flex items-center justify-between gap-2 sm:contents">
         <span
@@ -70,6 +77,36 @@ function CircularRowLine({
       </div>
       <div className="flex-1 min-w-0">
         <span className="block text-sm font-medium leading-snug line-clamp-2">{title}</span>
+        {isAddendum && (
+          <Link
+            to="/dashboard/circulars/$ocNumber"
+            params={{ ocNumber: encodeURIComponent(row.oc_base!) }}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <CornerDownRight className="size-3" /> Addendum to {row.oc_base}
+            {parent?.oc_name ? ` — ${parent.oc_name}` : ""}
+          </Link>
+        )}
+        {addenda && addenda.length > 0 && (
+          <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <CornerDownRight className="size-3" />
+            {addenda.length} addend{addenda.length === 1 ? "um" : "a"}:{" "}
+            {addenda.map((a, i) => (
+              <span key={a.oc_number}>
+                {i > 0 && ", "}
+                <Link
+                  to="/dashboard/circulars/$ocNumber"
+                  params={{ ocNumber: encodeURIComponent(a.oc_number) }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  {a.oc_number}
+                </Link>
+              </span>
+            ))}
+          </span>
+        )}
         {snippet && (
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
             {snippet.map((part, i) =>
@@ -115,53 +152,6 @@ function CircularRowLine({
       >
         View details
       </Link>
-    </div>
-  );
-}
-
-export function CircularListItem({
-  group,
-  expanded,
-  onToggleExpand,
-  highlightTerm,
-}: {
-  group: GroupedCircular;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  highlightTerm?: string;
-}) {
-  const hasChildren = group.children.length > 0;
-
-  return (
-    <div className="border-b border-foreground/[0.06] last:border-0">
-      <div className="flex items-start">
-        {hasChildren ? (
-          <button
-            onClick={onToggleExpand}
-            aria-label={expanded ? "Collapse addenda" : "Expand addenda"}
-            className="flex-shrink-0 p-1.5 mt-2.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-          </button>
-        ) : (
-          <span className="w-7 flex-shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <CircularRowLine row={group.parent} highlightTerm={highlightTerm} />
-        </div>
-        {hasChildren && (
-          <span className="flex-shrink-0 mr-3 mt-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            +{group.children.length} addenda
-          </span>
-        )}
-      </div>
-      {hasChildren && expanded && (
-        <div className="pb-2">
-          {group.children.map((child) => (
-            <CircularRowLine key={child.id} row={child} indent highlightTerm={highlightTerm} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -36,7 +36,6 @@ export const Route = createFileRoute("/dashboard")({
 
 const TABS = [
   { name: "Overview", href: "/dashboard" },
-  { name: "Trends", href: "/dashboard/trends" },
   { name: "All apps", href: "/dashboard/data" },
   { name: "Year Review", href: "/dashboard/year" },
   { name: "Spending", href: "/dashboard/spending" },
