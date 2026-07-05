@@ -7,7 +7,6 @@ import {
   StatewiseRow,
   StatewiseTrendPoint,
 } from "./types";
-import { AVAILABLE_MONTHS } from "./queries";
 import { getMarketEvents } from "./events";
 import { getStatePopulations } from "./population";
 
@@ -85,22 +84,33 @@ async function fetchAllMonths(): Promise<MonthBucket[]> {
   }
 
   const byMonth = new Map<string, AppMonthData[]>();
+  const monthMeta = new Map<string, { year: number; month: string; month_num: number }>();
   for (const r of raw) {
     if (!r.app_name_raw) continue;
     const key = `${r.year}-${r.month_num}`;
+    if (!monthMeta.has(key)) monthMeta.set(key, { year: r.year, month: r.month, month_num: r.month_num });
     let list = byMonth.get(key);
     if (!list) byMonth.set(key, (list = []));
     list.push(mapMonthlyRow(r));
   }
 
-  // Every available month gets a bucket (possibly empty), matching the shape
-  // the old getAllMonthsData() returned.
-  return AVAILABLE_MONTHS.map((m) => ({
-    year: m.year,
-    month: m.month,
-    month_num: m.month_num,
-    rows: dedupeMonthRows(byMonth.get(`${m.year}-${m.month_num}`) ?? []),
-  }));
+  // Bucket list is derived straight from the fetched rows (not a hardcoded
+  // calendar), so a newly-ingested month shows up without a code change.
+  return Array.from(monthMeta.values())
+    .sort((a, b) => a.year - b.year || a.month_num - b.month_num)
+    .map((m) => ({ ...m, rows: dedupeMonthRows(byMonth.get(`${m.year}-${m.month_num}`) ?? []) }));
+}
+
+/** Latest (year, month_num) present in upi_monthly_data — drives AVAILABLE_MONTHS/LATEST_MONTH. */
+async function fetchLatestMonth(): Promise<{ year: number; month_num: number } | null> {
+  const { data, error } = await supabase
+    .from("upi_monthly_data")
+    .select("year, month_num")
+    .order("year", { ascending: false })
+    .order("month_num", { ascending: false })
+    .limit(1);
+  if (error || !data?.length) return null;
+  return { year: data[0].year, month_num: data[0].month_num };
 }
 
 async function fetchMonthData(year: number, month: string): Promise<AppMonthData[]> {
@@ -290,6 +300,16 @@ export const allMonthsQuery = () =>
     queryFn: fetchAllMonths,
     staleTime: HOUR,
     gcTime: 24 * HOUR,
+  });
+
+// Ingestion runs once a month, so this is cheap to hold onto for a long time —
+// staleTime just controls how soon a page reload re-checks for a new month.
+export const latestMonthQuery = () =>
+  queryOptions({
+    queryKey: ["upi", "months", "latest"],
+    queryFn: fetchLatestMonth,
+    staleTime: 6 * HOUR,
+    gcTime: 7 * 24 * HOUR,
   });
 
 export const monthDataQuery = (year: number, month: string) =>

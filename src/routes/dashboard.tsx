@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { DashboardProvider, useDashboard } from "@/components/upi/DashboardContext";
 import { MetricToggle, MonthScrubber } from "@/components/upi/Controls";
 import { analytics } from "@/lib/analytics";
+import { useAvailableMonths } from "@/lib/upi/hooks";
 import { allMonthsQuery } from "@/lib/upi/queryOptions";
 import type { Metric } from "@/lib/upi/types";
 
@@ -52,6 +53,7 @@ function DashboardLayout() {
 
 function Shell() {
   const { year, month, metric, setMonthYear, setMetric } = useDashboard();
+  const { latestMonth } = useAvailableMonths();
 
   const handleMonthChange = (y: number, m: string) => {
     analytics.monthChanged(y, m, "scrubber");
@@ -152,7 +154,7 @@ function Shell() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 flex flex-col gap-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Data: NPCI monthly reports · Jan 2021 — May 2026
+              Data: NPCI monthly reports · Jan 2021 — {latestMonth.month} {latestMonth.year}
             </p>
             <div className="flex items-center gap-4">
               <p className="font-mono text-[10px] text-muted-foreground">

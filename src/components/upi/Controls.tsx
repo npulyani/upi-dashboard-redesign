@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AVAILABLE_MONTHS } from "@/lib/upi/queries";
+import { useAvailableMonths } from "@/lib/upi/hooks";
 
 export function MonthScrubber({
   year,
@@ -10,14 +10,16 @@ export function MonthScrubber({
   month: string;
   onChange: (y: number, m: string) => void;
 }) {
+  const { availableMonths } = useAvailableMonths();
+
   const years = useMemo(
-    () => Array.from(new Set(AVAILABLE_MONTHS.map((m) => m.year))),
-    [],
+    () => Array.from(new Set(availableMonths.map((m) => m.year))),
+    [availableMonths],
   );
 
   const monthsForYear = useMemo(
-    () => AVAILABLE_MONTHS.filter((m) => m.year === year),
-    [year],
+    () => availableMonths.filter((m) => m.year === year),
+    [availableMonths, year],
   );
 
   return (
@@ -26,7 +28,7 @@ export function MonthScrubber({
         value={year}
         onChange={(e) => {
           const newYear = Number(e.target.value);
-          const available = AVAILABLE_MONTHS.filter((m) => m.year === newYear);
+          const available = availableMonths.filter((m) => m.year === newYear);
           const newMonth = available.find((m) => m.month === month)
             ? month
             : available[available.length - 1]?.month ?? month;

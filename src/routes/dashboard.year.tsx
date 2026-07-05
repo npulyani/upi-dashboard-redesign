@@ -3,8 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { YearCalendar } from "@/components/upi/YearCalendar";
-import { AVAILABLE_MONTHS, formatNumber, formatIndianNumber } from "@/lib/upi/queries";
-import { useAllMonths } from "@/lib/upi/hooks";
+import { formatNumber, formatIndianNumber } from "@/lib/upi/queries";
+import { useAllMonths, useAvailableMonths } from "@/lib/upi/hooks";
 import { totalFor, ranked } from "@/lib/upi/insights";
 import { AppMonthData } from "@/lib/upi/types";
 
@@ -14,8 +14,6 @@ export const Route = createFileRoute("/dashboard/year")({
   }),
   component: YearReviewPage,
 });
-
-const YEARS = Array.from(new Set(AVAILABLE_MONTHS.map((m) => m.year)));
 
 interface MonthCell {
   year: number;
@@ -28,7 +26,9 @@ interface MonthCell {
 function YearReviewPage() {
   const { metric, setMonthYear, year: contextYear } = useDashboard();
   const navigate = useNavigate();
+  const { availableMonths } = useAvailableMonths();
 
+  const YEARS = useMemo(() => Array.from(new Set(availableMonths.map((m) => m.year))), [availableMonths]);
   const defaultYear = YEARS.includes(contextYear) ? contextYear : YEARS[YEARS.length - 1];
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
 
@@ -38,10 +38,10 @@ function YearReviewPage() {
   const cells = useMemo<MonthCell[]>(() => {
     if (!allMonths.length) return [];
     const dataMap = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
-    return AVAILABLE_MONTHS.filter((m) => m.year === selectedYear).map((m) => {
+    return availableMonths.filter((m) => m.year === selectedYear).map((m) => {
       const prevIdx =
-        AVAILABLE_MONTHS.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
-      const prev = prevIdx >= 0 ? AVAILABLE_MONTHS[prevIdx] : null;
+        availableMonths.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
+      const prev = prevIdx >= 0 ? availableMonths[prevIdx] : null;
       return {
         year: m.year,
         month: m.month,
@@ -50,7 +50,7 @@ function YearReviewPage() {
         previous: prev ? (dataMap.get(`${prev.year}-${prev.month_num}`) ?? []) : [],
       };
     });
-  }, [allMonths, selectedYear]);
+  }, [allMonths, availableMonths, selectedYear]);
 
   // Year summary stats
   const yearStats = useMemo(() => {

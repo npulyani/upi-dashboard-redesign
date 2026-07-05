@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   allMonthsQuery,
   eventsQuery,
+  latestMonthQuery,
   mccDataQuery,
   monthDataQuery,
   MonthBucket,
@@ -21,7 +22,7 @@ import {
   SearchQuery,
 } from "./circularsQueryOptions";
 import { circularsSearchEngineQuery } from "./circularsSearch";
-import { AVAILABLE_MONTHS, LATEST_MONTH } from "./queries";
+import { AvailableMonth, buildAvailableMonths, STATIC_AVAILABLE_MONTHS, STATIC_LATEST_MONTH } from "./queries";
 import { buildSeasonalityMatrix } from "./insights";
 import { AppMonthData, CircularRow, MccRow, Metric, TrendPoint } from "./types";
 
@@ -35,6 +36,20 @@ const EMPTY_YEARS: number[] = [];
 export function useAllMonths() {
   const { data, isPending } = useQuery(allMonthsQuery());
   return { allMonths: data ?? EMPTY_MONTHS, isPending };
+}
+
+/**
+ * Available months (Jan 2021 → latest ingested), driven by the DB's max
+ * (year, month_num) instead of a hardcoded bound. Falls back to the static
+ * calendar — matching the last month this file was hand-updated for — until
+ * the query resolves or if it errors, so the app always renders something.
+ */
+export function useAvailableMonths(): { availableMonths: AvailableMonth[]; latestMonth: AvailableMonth } {
+  const { data: latest } = useQuery(latestMonthQuery());
+  return useMemo(() => {
+    const availableMonths = latest ? buildAvailableMonths(latest) : STATIC_AVAILABLE_MONTHS;
+    return { availableMonths, latestMonth: availableMonths[availableMonths.length - 1] };
+  }, [latest]);
 }
 
 /**
@@ -161,14 +176,12 @@ export function useCircular(ocNumber: string) {
 
 // ── Pure derivations over the in-memory history ──────────────────────────────
 
-function windowOf(monthsBack: number, endYear: number, endMonth: string) {
-  const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === endYear && m.month === endMonth);
+// The window is sliced from the fetched history itself (not a separate
+// calendar array), so it always matches whatever months are actually loaded.
+function windowOf(allMonths: MonthBucket[], monthsBack: number, endYear: number, endMonth: string) {
+  const endIdx = allMonths.findIndex((m) => m.year === endYear && m.month === endMonth);
   if (endIdx < 0) return [];
-  return AVAILABLE_MONTHS.slice(Math.max(0, endIdx - monthsBack + 1), endIdx + 1);
-}
-
-function bucketMap(allMonths: MonthBucket[]) {
-  return new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
+  return allMonths.slice(Math.max(0, endIdx - monthsBack + 1), endIdx + 1);
 }
 
 /** Replaces getAppTrend(): derives a per-app series from the loaded history. */
@@ -176,12 +189,11 @@ export function appTrendFrom(
   allMonths: MonthBucket[],
   appName: string,
   monthsBack = 24,
-  endYear = LATEST_MONTH.year,
-  endMonth = LATEST_MONTH.month,
+  endYear = STATIC_LATEST_MONTH.year,
+  endMonth = STATIC_LATEST_MONTH.month,
 ): TrendPoint[] {
-  const buckets = bucketMap(allMonths);
-  return windowOf(monthsBack, endYear, endMonth).map((m) => {
-    const row = buckets.get(`${m.year}-${m.month_num}`)?.find((r) => r.app_name === appName);
+  return windowOf(allMonths, monthsBack, endYear, endMonth).map((m) => {
+    const row = m.rows.find((r) => r.app_name === appName);
     return {
       year: m.year,
       month: m.month,
@@ -198,12 +210,11 @@ export function multiAppTrendFrom(
   allMonths: MonthBucket[],
   appNames: string[],
   monthsBack = 24,
-  endYear = LATEST_MONTH.year,
-  endMonth = LATEST_MONTH.month,
+  endYear = STATIC_LATEST_MONTH.year,
+  endMonth = STATIC_LATEST_MONTH.month,
 ): Record<string, number | string>[] {
-  const buckets = bucketMap(allMonths);
-  return windowOf(monthsBack, endYear, endMonth).map((m) => {
-    const rows = buckets.get(`${m.year}-${m.month_num}`) ?? [];
+  return windowOf(allMonths, monthsBack, endYear, endMonth).map((m) => {
+    const rows = m.rows;
     const byApp = new Map(rows.map((r) => [r.app_name, r]));
     const row: Record<string, number | string> = {
       label: `${m.month} '${String(m.year).slice(2)}`,

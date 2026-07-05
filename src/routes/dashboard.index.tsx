@@ -10,7 +10,6 @@ import { TrajectoryCard } from "@/components/upi/trends/TrajectoryCard";
 import { PremiumnessCard } from "@/components/upi/trends/PremiumnessCard";
 import { TicketSizeCard } from "@/components/upi/trends/TicketSizeCard";
 import {
-  AVAILABLE_MONTHS,
   getPreviousMonth,
   formatNumber,
   formatIndianNumber,
@@ -18,6 +17,7 @@ import {
 import {
   multiAppTrendFrom,
   useAllMonths,
+  useAvailableMonths,
   useMccData,
   useMonthData,
   usePopulations,
@@ -50,8 +50,9 @@ function OverviewPage() {
   const [mapMetric, setMapMetric] = useState<MapMetric>("volume");
   const [selected, setSelected] = useState<string[]>([]);
 
+  const { availableMonths } = useAvailableMonths();
   const { rows: current, isPending: loading } = useMonthData(year, month);
-  const prevM = getPreviousMonth(year, month);
+  const prevM = getPreviousMonth(availableMonths, year, month);
   const { rows: previous } = useMonthData(prevM?.year ?? null, prevM?.month ?? null);
   const stateData = useStatewise(year, month);
   const populations = usePopulations() ?? EMPTY_POPULATIONS;
@@ -83,12 +84,11 @@ function OverviewPage() {
   // Last-12-months ecosystem total, derived from the shared history
   const ecosystemTrend = useMemo(() => {
     if (!allMonths.length) return [];
-    const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
+    const endIdx = allMonths.findIndex((m) => m.year === year && m.month === month);
     if (endIdx < 0) return [];
     const startIdx = Math.max(0, endIdx - 11);
-    const buckets = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
-    return AVAILABLE_MONTHS.slice(startIdx, endIdx + 1).map((m) =>
-      (buckets.get(`${m.year}-${m.month_num}`) ?? []).reduce(
+    return allMonths.slice(startIdx, endIdx + 1).map((b) =>
+      b.rows.reduce(
         (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
         0,
       ),
