@@ -22,7 +22,12 @@ import {
   SearchQuery,
 } from "./circularsQueryOptions";
 import { circularsSearchEngineQuery } from "./circularsSearch";
-import { AvailableMonth, buildAvailableMonths, STATIC_AVAILABLE_MONTHS, STATIC_LATEST_MONTH } from "./queries";
+import {
+  AvailableMonth,
+  buildAvailableMonths,
+  STATIC_AVAILABLE_MONTHS,
+  STATIC_LATEST_MONTH,
+} from "./queries";
 import { buildSeasonalityMatrix } from "./insights";
 import { AppMonthData, CircularRow, MccRow, Metric, TrendPoint } from "./types";
 
@@ -44,7 +49,10 @@ export function useAllMonths() {
  * calendar — matching the last month this file was hand-updated for — until
  * the query resolves or if it errors, so the app always renders something.
  */
-export function useAvailableMonths(): { availableMonths: AvailableMonth[]; latestMonth: AvailableMonth } {
+export function useAvailableMonths(): {
+  availableMonths: AvailableMonth[];
+  latestMonth: AvailableMonth;
+} {
   const { data: latest } = useQuery(latestMonthQuery());
   return useMemo(() => {
     const availableMonths = latest ? buildAvailableMonths(latest) : STATIC_AVAILABLE_MONTHS;

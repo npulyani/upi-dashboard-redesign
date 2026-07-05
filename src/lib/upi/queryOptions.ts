@@ -88,7 +88,9 @@ async function fetchAllMonths(): Promise<MonthBucket[]> {
   for (const r of raw) {
     if (!r.app_name_raw) continue;
     const key = `${r.year}-${r.month_num}`;
-    if (!monthMeta.has(key)) monthMeta.set(key, { year: r.year, month: r.month, month_num: r.month_num });
+    if (!monthMeta.has(key)) {
+      monthMeta.set(key, { year: r.year, month: r.month, month_num: r.month_num });
+    }
     let list = byMonth.get(key);
     if (!list) byMonth.set(key, (list = []));
     list.push(mapMonthlyRow(r));

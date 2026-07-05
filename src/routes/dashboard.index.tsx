@@ -9,11 +9,7 @@ import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
 import { TrajectoryCard } from "@/components/upi/trends/TrajectoryCard";
 import { PremiumnessCard } from "@/components/upi/trends/PremiumnessCard";
 import { TicketSizeCard } from "@/components/upi/trends/TicketSizeCard";
-import {
-  getPreviousMonth,
-  formatNumber,
-  formatIndianNumber,
-} from "@/lib/upi/queries";
+import { getPreviousMonth, formatNumber, formatIndianNumber } from "@/lib/upi/queries";
 import {
   multiAppTrendFrom,
   useAllMonths,
@@ -87,12 +83,14 @@ function OverviewPage() {
     const endIdx = allMonths.findIndex((m) => m.year === year && m.month === month);
     if (endIdx < 0) return [];
     const startIdx = Math.max(0, endIdx - 11);
-    return allMonths.slice(startIdx, endIdx + 1).map((b) =>
-      b.rows.reduce(
-        (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
-        0,
-      ),
-    );
+    return allMonths
+      .slice(startIdx, endIdx + 1)
+      .map((b) =>
+        b.rows.reduce(
+          (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
+          0,
+        ),
+      );
   }, [allMonths, year, month, metric]);
 
   const sorted = useMemo(
