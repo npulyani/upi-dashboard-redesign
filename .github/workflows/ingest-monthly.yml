@@ -1,0 +1,80 @@
+name: Ingest monthly NPCI data
+
+# Checks on the 1st/11th/21st whether NPCI has published the previous month
+# and ingests whatever is missing (scripts/run_monthly_update.mjs). Quiet
+# no-op once the month is fully ingested. Dispatch with an explicit
+# year/month to backfill or re-ingest a month NPCI has revised.
+on:
+  schedule:
+    - cron: "30 3 1,11,21 * *" # 09:00 IST
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Override year (e.g. 2026) — requires month"
+        required: false
+      month:
+        description: "Override month, 3-letter (e.g. Jun) — requires year"
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ingest-monthly
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run monthly update
+        id: run
+        run: >
+          node scripts/run_monthly_update.mjs
+          ${{ inputs.year && format('--year {0} --month {1}', inputs.year, inputs.month) || '' }}
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Open notification issue
+        if: >
+          always() && (
+            steps.run.outputs.status == 'ingested' ||
+            steps.run.outputs.status == 'failed' ||
+            steps.run.outputs.warnings_count > 0 ||
+            (failure() && steps.run.outputs.status == '')
+          )
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            const status = "${{ steps.run.outputs.status }}" || "failed";
+            const month = "${{ steps.run.outputs.month_label }}" || "unknown month";
+            const warnings = Number("${{ steps.run.outputs.warnings_count }}" || 0);
+            const bodyPath = "${{ steps.run.outputs.issue_body_path }}";
+            const body = bodyPath && fs.existsSync(bodyPath)
+              ? fs.readFileSync(bodyPath, "utf8")
+              : `Monthly ingest step ended before writing a summary — check the run log.`;
+            const title =
+              status === "failed"
+                ? `Monthly ingest FAILED — ${month}`
+                : `Monthly ingest: ${month} ${status}` + (warnings ? ` (${warnings} warning${warnings > 1 ? "s" : ""})` : "");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `${body}\n\n[Run log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ["data-ingest", "automated"],
+            });

@@ -88,6 +88,27 @@ export function isFutureDeadline(deadline: string | null): boolean {
   return Number.isFinite(parsed) && parsed > Date.now();
 }
 
+/**
+ * Whether a circular was ingested recently enough to carry the "New" badge.
+ * Keyed on created_at (set once on insert, never on re-fetch upserts) rather
+ * than doc_date — NPCI sometimes publishes circulars weeks after they're
+ * dated, and "new" means "new on this dashboard".
+ *
+ * The epoch floor excludes the initial ~240-circular backfill (created_at
+ * all on 2026-07-01), which would otherwise badge the entire list as "New"
+ * for the feature's first month. Rows from 2026-07-03 onward are organic
+ * fetches of genuinely new circulars.
+ */
+const NEW_BADGE_EPOCH = Date.parse("2026-07-03T00:00:00Z");
+
+export function isNewCircular(createdAt: string | null | undefined, days = 30): boolean {
+  if (!createdAt) return false;
+  const parsed = Date.parse(createdAt);
+  return (
+    Number.isFinite(parsed) && parsed >= NEW_BADGE_EPOCH && parsed > Date.now() - days * 86_400_000
+  );
+}
+
 // ── Search snippets ───────────────────────────────────────────────────────────
 
 const STOPWORDS = new Set([

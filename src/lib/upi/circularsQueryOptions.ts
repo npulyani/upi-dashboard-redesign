@@ -12,7 +12,7 @@ export const CIRCULARS_PAGE_SIZE = 20;
 // row line renders (category badge + action-item deadline chip), not the
 // full jsonb.
 const CIRCULAR_LIST_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, summary_category:summary->>category, summary_action_items:summary->action_items";
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, created_at, summary_category:summary->>category, summary_action_items:summary->action_items";
 
 // Detail page: single-row fetch, fine to pull the full summary jsonb.
 const CIRCULAR_DETAIL_COLUMNS =

@@ -12,6 +12,7 @@ import {
   useCircularYears,
 } from "@/lib/upi/hooks";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { Badge } from "@/components/ui/badge";
 import { classifySearch } from "@/lib/upi/circularsQueryOptions";
 import { analytics } from "@/lib/analytics";
 
@@ -176,6 +177,14 @@ function CircularsPage() {
             Loading more…
           </span>
         )}
+      </div>
+
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <Badge className="text-[10px]">New</Badge>
+        <span>
+          — added to this dashboard within the last 30 days. Circulars are fetched automatically
+          from npci.org.in every two days.
+        </span>
       </div>
     </div>
   );

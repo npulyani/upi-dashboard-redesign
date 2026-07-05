@@ -51,8 +51,10 @@ const CORPUS_PATH = "search/corpus.json";
 
 // Same row shape as CIRCULAR_LIST_COLUMNS (src/lib/upi/circularsQueryOptions.ts)
 // plus content_text, so corpus rows drop straight into the list components.
+// created_at must stay in both selects — it drives the 30-day "New" badge,
+// which would otherwise silently vanish in keyword-search results.
 const CORPUS_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url, summary_category:summary->>category, summary_action_items:summary->action_items";
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, content_text, storage_path, source_url, created_at, summary_category:summary->>category, summary_action_items:summary->action_items";
 
 async function main() {
   if (!SUPABASE_URL || !SUPABASE_KEY) {

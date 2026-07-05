@@ -3,7 +3,12 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { CornerDownRight } from "lucide-react";
 import { circularRouteKey } from "@/lib/upi/circularsQueryOptions";
 import { CircularFamily } from "@/lib/upi/hooks";
-import { circularDisplayName, deriveSnippet, isFutureDeadline } from "@/lib/upi/circularText";
+import {
+  circularDisplayName,
+  deriveSnippet,
+  isFutureDeadline,
+  isNewCircular,
+} from "@/lib/upi/circularText";
 import { CircularRow } from "@/lib/upi/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,6 +40,7 @@ export function CircularListItem({
   );
   const actionItems = row.summary_action_items ?? [];
   const hasFutureDeadline = actionItems.some((a) => isFutureDeadline(a.deadline));
+  const isNew = isNewCircular(row.created_at);
 
   // Cross-reference, both directions — the family index (not this row's
   // own oc_base/oc_number alone) is what tells us whether this is an
@@ -71,9 +77,12 @@ export function CircularListItem({
         >
           {badge}
         </span>
-        <span className="font-mono text-xs text-muted-foreground flex-shrink-0 sm:hidden">
-          {formatDocDate(row.doc_date)}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0 sm:hidden">
+          {isNew && <Badge className="text-[10px]">New</Badge>}
+          <span className="font-mono text-xs text-muted-foreground">
+            {formatDocDate(row.doc_date)}
+          </span>
+        </div>
       </div>
       <div className="flex-1 min-w-0">
         <span className="block text-sm font-medium leading-snug line-clamp-2">{title}</span>
@@ -121,8 +130,9 @@ export function CircularListItem({
           </p>
         )}
       </div>
-      {(row.summary_category || actionItems.length > 0) && (
+      {(isNew || row.summary_category || actionItems.length > 0) && (
         <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5">
+          {isNew && <Badge className="text-[10px]">New</Badge>}
           {row.summary_category && (
             <Badge variant="secondary" className="text-[10px]">
               {row.summary_category}

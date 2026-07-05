@@ -1,0 +1,74 @@
+name: Ingest NPCI circulars
+
+# Every 2 days: fetch new circulars, OCR + summarize them (Claude), rebuild
+# the client-side search corpus (scripts/run_circulars_update.mjs). Silent
+# when nothing is new; opens an issue when circulars land, warnings appear,
+# or a step fails. New rows get the frontend "New" badge for 30 days via
+# npci_circulars.created_at.
+on:
+  schedule:
+    - cron: "30 3 */2 * *" # 09:00 IST every other day
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ingest-circulars
+  cancel-in-progress: false # never kill a half-done OCR batch; runs queue instead
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run circulars update
+        id: run
+        run: node scripts/run_circulars_update.mjs
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Open notification issue
+        if: >
+          always() && (
+            steps.run.outputs.status == 'ingested' ||
+            steps.run.outputs.status == 'failed' ||
+            steps.run.outputs.warnings_count > 0 ||
+            (failure() && steps.run.outputs.status == '')
+          )
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            const status = "${{ steps.run.outputs.status }}" || "failed";
+            const newCount = Number("${{ steps.run.outputs.new_count }}" || 0);
+            const warnings = Number("${{ steps.run.outputs.warnings_count }}" || 0);
+            const bodyPath = "${{ steps.run.outputs.issue_body_path }}";
+            const body = bodyPath && fs.existsSync(bodyPath)
+              ? fs.readFileSync(bodyPath, "utf8")
+              : `Circulars ingest step ended before writing a summary — check the run log.`;
+            const title =
+              status === "failed"
+                ? "Circulars ingest FAILED"
+                : `Circulars ingest: ${newCount} new circular${newCount === 1 ? "" : "s"}` +
+                  (warnings ? ` (${warnings} warning${warnings > 1 ? "s" : ""})` : "");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `${body}\n\n[Run log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ["data-ingest", "automated"],
+            });
