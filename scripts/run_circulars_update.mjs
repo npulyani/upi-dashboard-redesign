@@ -220,7 +220,8 @@ try {
   const ocrFailed = await countFailedSince("ocr_status", "ocr_at", stepsStartIso);
   const summaryFailed = await countFailedSince("summary_status", "summary_at", stepsStartIso);
   if (ocrFailed > 0) warnings.push(`${ocrFailed} circular(s) failed OCR this run`);
-  if (summaryFailed > 0) warnings.push(`${summaryFailed} circular(s) failed summarization this run`);
+  if (summaryFailed > 0)
+    warnings.push(`${summaryFailed} circular(s) failed summarization this run`);
 } catch (err) {
   warnings.push(err.message);
 }

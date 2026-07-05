@@ -67,7 +67,20 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { transpor
 // ---------------------------------------------------------------------------
 // Args / expected month
 // ---------------------------------------------------------------------------
-const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -182,10 +195,13 @@ function finish(status, { results = [], warnings = [] } = {}) {
   }
   const md = lines.join("\n");
 
-  console.log(`\n=== ${monthLabel}: ${status}` +
-    (ingested.length ? ` — ingested: ${ingested.join(", ")}` : "") +
-    (pending.length ? ` — still unpublished: ${pending.join(", ")}` : "") +
-    (warnings.length ? ` — ${warnings.length} warning(s)` : "") + " ===");
+  console.log(
+    `\n=== ${monthLabel}: ${status}` +
+      (ingested.length ? ` — ingested: ${ingested.join(", ")}` : "") +
+      (pending.length ? ` — still unpublished: ${pending.join(", ")}` : "") +
+      (warnings.length ? ` — ${warnings.length} warning(s)` : "") +
+      " ===",
+  );
   for (const w of warnings) console.log(`  ⚠ ${w}`);
 
   ghSummary(md);
@@ -238,11 +254,9 @@ let failed = false;
 for (const dataset of missing) {
   console.log(`\n── ${dataset.name} (${dataset.script}) ──`);
   const scriptPath = fileURLToPath(new URL(`./${dataset.script}`, import.meta.url));
-  const child = spawnSync(
-    "node",
-    [scriptPath, "--year", String(year), "--month", month],
-    { encoding: "utf8" },
-  );
+  const child = spawnSync("node", [scriptPath, "--year", String(year), "--month", month], {
+    encoding: "utf8",
+  });
   const stdout = child.stdout ?? "";
   const stderr = child.stderr ?? "";
   if (stdout) process.stdout.write(stdout);
