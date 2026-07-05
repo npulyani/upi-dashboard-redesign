@@ -112,6 +112,14 @@ export interface CircularRow {
   /** Scoped summary keys selected on the list page (keep paginated payload small). */
   summary_category?: string | null;
   summary_action_items?: CircularActionItem[] | null;
+  /**
+   * When the row was first inserted (drives the 30-day "New" badge). Set by
+   * the DB default on insert only — the fetch script's upsert must never
+   * include this column (see scripts/fetch_npci_circulars.mjs) or every
+   * re-fetch would reset it. Selected on the list query and in the search
+   * corpus; absent on the detail fetch.
+   */
+  created_at?: string | null;
 }
 
 export const MONTHS = [
