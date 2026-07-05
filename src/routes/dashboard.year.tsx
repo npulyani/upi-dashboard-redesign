@@ -28,7 +28,10 @@ function YearReviewPage() {
   const navigate = useNavigate();
   const { availableMonths } = useAvailableMonths();
 
-  const YEARS = useMemo(() => Array.from(new Set(availableMonths.map((m) => m.year))), [availableMonths]);
+  const YEARS = useMemo(
+    () => Array.from(new Set(availableMonths.map((m) => m.year))),
+    [availableMonths],
+  );
   const defaultYear = YEARS.includes(contextYear) ? contextYear : YEARS[YEARS.length - 1];
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
 
@@ -38,18 +41,20 @@ function YearReviewPage() {
   const cells = useMemo<MonthCell[]>(() => {
     if (!allMonths.length) return [];
     const dataMap = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
-    return availableMonths.filter((m) => m.year === selectedYear).map((m) => {
-      const prevIdx =
-        availableMonths.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
-      const prev = prevIdx >= 0 ? availableMonths[prevIdx] : null;
-      return {
-        year: m.year,
-        month: m.month,
-        month_num: m.month_num,
-        current: dataMap.get(`${m.year}-${m.month_num}`) ?? [],
-        previous: prev ? (dataMap.get(`${prev.year}-${prev.month_num}`) ?? []) : [],
-      };
-    });
+    return availableMonths
+      .filter((m) => m.year === selectedYear)
+      .map((m) => {
+        const prevIdx =
+          availableMonths.findIndex((x) => x.year === m.year && x.month_num === m.month_num) - 1;
+        const prev = prevIdx >= 0 ? availableMonths[prevIdx] : null;
+        return {
+          year: m.year,
+          month: m.month,
+          month_num: m.month_num,
+          current: dataMap.get(`${m.year}-${m.month_num}`) ?? [],
+          previous: prev ? (dataMap.get(`${prev.year}-${prev.month_num}`) ?? []) : [],
+        };
+      });
   }, [allMonths, availableMonths, selectedYear]);
 
   // Year summary stats

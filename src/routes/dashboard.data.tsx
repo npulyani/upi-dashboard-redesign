@@ -4,10 +4,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react"
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
-import {
-  getPreviousMonth,
-  formatIndianNumber,
-} from "@/lib/upi/queries";
+import { getPreviousMonth, formatIndianNumber } from "@/lib/upi/queries";
 import { useAllMonths, useAvailableMonths, useMonthData } from "@/lib/upi/hooks";
 import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
@@ -58,9 +55,9 @@ function DataPage() {
     if (!allMonths.length || !current.length) return {} as Record<string, number[]>;
     const endIdx = allMonths.findIndex((m) => m.year === year && m.month === month);
     if (endIdx < 0) return {} as Record<string, number[]>;
-    const monthMaps = allMonths.slice(Math.max(0, endIdx - 11), endIdx + 1).map(
-      (b) => new Map(b.rows.map((r) => [r.app_name, r])),
-    );
+    const monthMaps = allMonths
+      .slice(Math.max(0, endIdx - 11), endIdx + 1)
+      .map((b) => new Map(b.rows.map((r) => [r.app_name, r])));
     const out: Record<string, number[]> = {};
     for (const r of current) {
       out[r.app_name] = monthMaps.map((mm) => {

@@ -37,7 +37,12 @@ export function getPreviousMonth(months: AvailableMonth[], year: number, month: 
   return months[idx - 1];
 }
 
-export function getMonthOffset(months: AvailableMonth[], year: number, month: string, offset: number) {
+export function getMonthOffset(
+  months: AvailableMonth[],
+  year: number,
+  month: string,
+  offset: number,
+) {
   const monthNum = MONTH_TO_NUM[month];
   const idx = months.findIndex((m) => m.year === year && m.month_num === monthNum);
   if (idx < 0) return null;
