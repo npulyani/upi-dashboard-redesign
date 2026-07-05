@@ -180,19 +180,6 @@ function finish(status, { results = [], warnings = [] } = {}) {
     lines.push(`### ⚠ Validation warnings (${warnings.length})`, "", "```");
     lines.push(...warnings, "```", "");
   }
-  if (ingested.includes("upi_apps")) {
-    // The app's month selector derives from a hardcoded bound, not the DB —
-    // ingested data stays invisible until this is bumped and deployed.
-    lines.push(
-      "### Manual follow-up required",
-      "",
-      "New month data is in the DB but NOT visible in the app yet. Bump the",
-      "`generateAvailableMonths()` bound in `src/lib/upi/queries.ts` and the",
-      `footer label in \`src/routes/dashboard.tsx\` to ${monthLabel}, then merge`,
-      "to deploy.",
-      "",
-    );
-  }
   const md = lines.join("\n");
 
   console.log(`\n=== ${monthLabel}: ${status}` +
