@@ -5,11 +5,10 @@ import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { Sparkline } from "@/components/upi/Sparkline";
 import {
-  AVAILABLE_MONTHS,
   getPreviousMonth,
   formatIndianNumber,
 } from "@/lib/upi/queries";
-import { useAllMonths, useMonthData } from "@/lib/upi/hooks";
+import { useAllMonths, useAvailableMonths, useMonthData } from "@/lib/upi/hooks";
 import { avgTicket } from "@/lib/upi/insights";
 import { AppLink } from "@/components/upi/AppLink";
 import { AppLogo } from "@/components/upi/AppLogo";
@@ -47,8 +46,9 @@ function DataPage() {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  const { availableMonths } = useAvailableMonths();
   const { rows: current, isPending: loading } = useMonthData(year, month);
-  const prevM = getPreviousMonth(year, month);
+  const prevM = getPreviousMonth(availableMonths, year, month);
   const { rows: prev } = useMonthData(prevM?.year ?? null, prevM?.month ?? null);
   const { allMonths } = useAllMonths();
 
@@ -56,11 +56,10 @@ function DataPage() {
   // every row gets one (the old per-app fetch limited this to the top 12).
   const sparks = useMemo(() => {
     if (!allMonths.length || !current.length) return {} as Record<string, number[]>;
-    const endIdx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month === month);
+    const endIdx = allMonths.findIndex((m) => m.year === year && m.month === month);
     if (endIdx < 0) return {} as Record<string, number[]>;
-    const buckets = new Map(allMonths.map((b) => [`${b.year}-${b.month_num}`, b.rows]));
-    const monthMaps = AVAILABLE_MONTHS.slice(Math.max(0, endIdx - 11), endIdx + 1).map(
-      (m) => new Map((buckets.get(`${m.year}-${m.month_num}`) ?? []).map((r) => [r.app_name, r])),
+    const monthMaps = allMonths.slice(Math.max(0, endIdx - 11), endIdx + 1).map(
+      (b) => new Map(b.rows.map((r) => [r.app_name, r])),
     );
     const out: Record<string, number[]> = {};
     for (const r of current) {

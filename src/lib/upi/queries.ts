@@ -3,11 +3,23 @@ import { MONTH_TO_NUM, NUM_TO_MONTH } from "./types";
 // Pure month-window utilities and formatters. All data fetching lives in
 // queryOptions.ts (React Query) and derivations in hooks.ts.
 
-// Generate available months: Jan 2021 → May 2026 (matches dataset)
-function generateAvailableMonths(): { year: number; month: string; month_num: number }[] {
-  const out: { year: number; month: string; month_num: number }[] = [];
-  for (let y = 2021; y <= 2026; y++) {
-    const lastMonth = y === 2026 ? 5 : 12;
+export interface AvailableMonth {
+  year: number;
+  month: string;
+  month_num: number;
+}
+
+// Static fallback bound, used only until the DB-driven latest month resolves
+// (see latestMonthQuery in queryOptions.ts) or if that query fails.
+const FALLBACK_LATEST = { year: 2026, month_num: 5 };
+
+/** Jan 2021 → latest (inclusive). Defaults to the static fallback bound. */
+export function buildAvailableMonths(
+  latest: { year: number; month_num: number } = FALLBACK_LATEST,
+): AvailableMonth[] {
+  const out: AvailableMonth[] = [];
+  for (let y = 2021; y <= latest.year; y++) {
+    const lastMonth = y === latest.year ? latest.month_num : 12;
     for (let m = 1; m <= lastMonth; m++) {
       out.push({ year: y, month: NUM_TO_MONTH[m], month_num: m });
     }
@@ -15,23 +27,23 @@ function generateAvailableMonths(): { year: number; month: string; month_num: nu
   return out;
 }
 
-export const AVAILABLE_MONTHS = generateAvailableMonths();
-export const LATEST_MONTH = AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1];
+export const STATIC_AVAILABLE_MONTHS = buildAvailableMonths();
+export const STATIC_LATEST_MONTH = STATIC_AVAILABLE_MONTHS[STATIC_AVAILABLE_MONTHS.length - 1];
 
-export function getPreviousMonth(year: number, month: string) {
+export function getPreviousMonth(months: AvailableMonth[], year: number, month: string) {
   const monthNum = MONTH_TO_NUM[month];
-  const idx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month_num === monthNum);
+  const idx = months.findIndex((m) => m.year === year && m.month_num === monthNum);
   if (idx <= 0) return null;
-  return AVAILABLE_MONTHS[idx - 1];
+  return months[idx - 1];
 }
 
-export function getMonthOffset(year: number, month: string, offset: number) {
+export function getMonthOffset(months: AvailableMonth[], year: number, month: string, offset: number) {
   const monthNum = MONTH_TO_NUM[month];
-  const idx = AVAILABLE_MONTHS.findIndex((m) => m.year === year && m.month_num === monthNum);
+  const idx = months.findIndex((m) => m.year === year && m.month_num === monthNum);
   if (idx < 0) return null;
   const target = idx - offset;
   if (target < 0) return null;
-  return AVAILABLE_MONTHS[target];
+  return months[target];
 }
 
 export function formatNumber(n: number, digits = 1): string {
