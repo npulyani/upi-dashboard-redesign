@@ -16,7 +16,32 @@ const HOUR = 60 * 60 * 1000;
 interface CircularsCorpus {
   generated_at: string;
   rows: CircularRow[];
+  /**
+   * Prebuilt MiniSearch index, serialized in the build script. When present
+   * the browser deserializes it (`loadJSON`, ~20ms) instead of re-tokenizing
+   * every circular's `content_text` in `addAll` (~150ms desktop, and seconds
+   * on a low-end phone — which froze the main thread and popped Chrome's
+   * "page unresponsive"). Falls back to `addAll` if absent (older corpus).
+   */
+  index?: string;
 }
+
+// MUST stay identical to MINISEARCH_OPTIONS in
+// scripts/build_circulars_search_corpus.mjs — the serialized index can only be
+// loaded with the same field config it was built with. scripts/ and src/ are
+// separate build contexts, so this is a deliberate duplication (same pattern
+// as parseOc / extractSubject).
+const MINISEARCH_OPTIONS = {
+  fields: ["oc_name", "content_text", "file_name"],
+  searchOptions: {
+    prefix: true,
+    fuzzy: 0.2,
+    combineWith: "OR" as const,
+    // The title names what the circular is *about*; weight it over a passing
+    // mention deep in some other circular's body.
+    boost: { oc_name: 3 },
+  },
+};
 
 export interface CircularsSearchFilters {
   year: number | null;
@@ -36,18 +61,15 @@ function matchesYear(row: CircularRow, year: number | null): boolean {
 }
 
 function buildEngine(corpus: CircularsCorpus): CircularsSearchEngine {
-  const mini = new MiniSearch<CircularRow>({
-    fields: ["oc_name", "content_text", "file_name"],
-    searchOptions: {
-      prefix: true,
-      fuzzy: 0.2,
-      combineWith: "OR",
-      // The title names what the circular is *about*; weight it over a
-      // passing mention deep in some other circular's body.
-      boost: { oc_name: 3 },
-    },
-  });
-  mini.addAll(corpus.rows);
+  let mini: MiniSearch<CircularRow>;
+  if (corpus.index) {
+    // Fast path: deserialize the prebuilt index (no main-thread tokenization).
+    mini = MiniSearch.loadJSON<CircularRow>(corpus.index, MINISEARCH_OPTIONS);
+  } else {
+    // Fallback for an older corpus without a prebuilt index.
+    mini = new MiniSearch<CircularRow>(MINISEARCH_OPTIONS);
+    mini.addAll(corpus.rows);
+  }
   const byId = new Map(corpus.rows.map((r) => [r.id, r]));
 
   return {
@@ -65,36 +87,12 @@ function buildEngine(corpus: CircularsCorpus): CircularsSearchEngine {
   };
 }
 
-interface CorpusManifest {
-  path: string;
-  generated_at: string;
-}
-
-function publicUrl(path: string): string {
-  return supabase.storage.from("circulars").getPublicUrl(path).data.publicUrl;
-}
-
-// Resolve the current corpus path via the manifest. The hashed corpus file is
-// immutable + long-cached (edge- and browser-cached), so it's fetched once and
-// never re-downloaded; the manifest is tiny and effectively uncached so a newly
-// built corpus is picked up immediately. Falls back to the legacy fixed path if
-// the manifest isn't present yet (e.g. before the next corpus rebuild).
-async function resolveCorpusPath(): Promise<string> {
-  try {
-    const res = await fetch(publicUrl("search/corpus-manifest.json"));
-    if (res.ok) {
-      const manifest = (await res.json()) as CorpusManifest;
-      if (manifest?.path) return manifest.path;
-    }
-  } catch {
-    // fall through to legacy path
-  }
-  return "search/corpus.json";
-}
-
 async function fetchSearchEngine(): Promise<CircularsSearchEngine> {
-  const path = await resolveCorpusPath();
-  const res = await fetch(publicUrl(path));
+  // Fixed path — served max-age=300 and Cloudflare edge-cached (verified via
+  // GET; HEAD misreports the header). Fetched once per session (React Query
+  // caches the built engine), and the browser cache serves it across reloads.
+  const { data } = supabase.storage.from("circulars").getPublicUrl("search/corpus.json");
+  const res = await fetch(data.publicUrl);
   if (!res.ok) throw new Error(`Search corpus fetch failed (${res.status})`);
   const corpus = (await res.json()) as CircularsCorpus;
   return buildEngine(corpus);
