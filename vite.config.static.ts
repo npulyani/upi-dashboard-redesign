@@ -49,6 +49,14 @@ export default defineConfig({
   // VITE_BASE_PATH=/upi-dashboard-redesign/  for github.io subdirectory
   // VITE_BASE_PATH=/                        for custom domain (default)
   base: process.env.VITE_BASE_PATH ?? "/",
+  // Tells __root.tsx's RootShell to skip the <html>/<body> document shell:
+  // this build mounts into <div id="root"> via createRoot, and React 19's
+  // html/body host singletons inside an inner container freeze the page on
+  // input focus (see RootShell comment). The TanStack Start build leaves this
+  // undefined and keeps the full shell.
+  define: {
+    "import.meta.env.VITE_STATIC_BUILD": "true",
+  },
   build: {
     outDir: "dist-static",
     // No manualChunks: forcing recharts into a named chunk dragged shared

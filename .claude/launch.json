@@ -4,8 +4,24 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 8080,
+      "autoPort": false
+    },
+    {
+      "name": "static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "dist-static",
+        "-l",
+        "8090",
+        "-s"
+      ],
+      "port": 8090,
       "autoPort": false
     }
   ]

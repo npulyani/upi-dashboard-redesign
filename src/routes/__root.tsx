@@ -98,6 +98,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  // The static SPA build (vite.config.static.ts) mounts into <div id="root">
+  // via createRoot, so it must NOT render <html>/<body>: React 19 treats them
+  // as host singletons and binds them to the real document elements, which
+  // puts document.body inside a React tree that is itself mounted inside
+  // document.body. react-dom's focus/selection tracking then walks that
+  // cyclic ancestor chain forever — focusing any text input hard-froze the
+  // page ("page unresponsive" on the circulars search box, the app's only
+  // input). HeadContent stays: React 19 hoists <meta>/<title>/<link> to
+  // document.head from anywhere in the tree, so per-route titles still work.
+  if (import.meta.env.VITE_STATIC_BUILD) {
+    return (
+      <>
+        <HeadContent />
+        {children}
+      </>
+    );
+  }
+  // TanStack Start build (SSR + hydrateRoot of the whole document): the shell
+  // legitimately owns <html>/<body>.
   return (
     <html lang="en">
       <head>
