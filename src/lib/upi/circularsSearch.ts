@@ -65,9 +65,36 @@ function buildEngine(corpus: CircularsCorpus): CircularsSearchEngine {
   };
 }
 
+interface CorpusManifest {
+  path: string;
+  generated_at: string;
+}
+
+function publicUrl(path: string): string {
+  return supabase.storage.from("circulars").getPublicUrl(path).data.publicUrl;
+}
+
+// Resolve the current corpus path via the manifest. The hashed corpus file is
+// immutable + long-cached (edge- and browser-cached), so it's fetched once and
+// never re-downloaded; the manifest is tiny and effectively uncached so a newly
+// built corpus is picked up immediately. Falls back to the legacy fixed path if
+// the manifest isn't present yet (e.g. before the next corpus rebuild).
+async function resolveCorpusPath(): Promise<string> {
+  try {
+    const res = await fetch(publicUrl("search/corpus-manifest.json"));
+    if (res.ok) {
+      const manifest = (await res.json()) as CorpusManifest;
+      if (manifest?.path) return manifest.path;
+    }
+  } catch {
+    // fall through to legacy path
+  }
+  return "search/corpus.json";
+}
+
 async function fetchSearchEngine(): Promise<CircularsSearchEngine> {
-  const { data } = supabase.storage.from("circulars").getPublicUrl("search/corpus.json");
-  const res = await fetch(data.publicUrl);
+  const path = await resolveCorpusPath();
+  const res = await fetch(publicUrl(path));
   if (!res.ok) throw new Error(`Search corpus fetch failed (${res.status})`);
   const corpus = (await res.json()) as CircularsCorpus;
   return buildEngine(corpus);
