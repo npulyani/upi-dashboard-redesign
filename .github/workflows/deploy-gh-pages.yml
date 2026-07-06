@@ -10,10 +10,13 @@ permissions:
   pages: write
   id-token: write
 
-# Only allow one deployment at a time; cancel any in-progress run on a new push.
+# Serialize deployments. Do NOT cancel an in-flight run: cancelling mid-deploy
+# (after the github-pages artifact is uploaded but before deploy-pages runs)
+# strands that artifact, and the next run then fails with "Multiple artifacts
+# named github-pages ... Artifact count is 2". Queue instead of cancelling.
 concurrency:
-  group: github-pages
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   deploy:
