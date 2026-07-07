@@ -193,6 +193,22 @@ The only implementation detail worth settling now is **how emails get sent**, si
 
 ---
 
+## Tech decisions (2026-07-07)
+
+- **Interactive server on Railway** (`server/`, Node + Hono, no build step)
+  hosts the four real-time paths: subscribe, confirm, unsubscribe, Resend
+  bounce/complaint webhook. Chosen over Supabase Edge Functions to keep one
+  runtime (Node) across scripts and server; chosen over a VPS to stay managed.
+- **Scheduled ingestion stays on GitHub Actions** — free (public repo),
+  observable (issue notifications), queued concurrency, manual dispatch. The
+  send-on-new-circular step will also live there, reading `circular_subscribers`.
+- **Decision rule:** the server only gets paths that must respond to an
+  external event in real time. Batch → Actions; reads → browser → Supabase.
+- **Data:** `circular_subscribers` table (migration
+  `supabase/migrations/add_circular_subscribers.sql`), RLS on with zero
+  policies — service-role access only, first private table in the project.
+- Setup runbook: [server/README.md](../server/README.md).
+
 ## Open questions
 
 1. **Digest vs. per-circular emails** when a single ingestion run finds several circulars (NPCI sometimes publishes in bursts). Per-circular is simpler and keeps the PDF-attachment model clean; a digest is less noisy.
