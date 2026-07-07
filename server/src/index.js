@@ -231,7 +231,7 @@ app.get("/api/confirm", async (c) => {
     body: `<h1>This link is no longer valid</h1>
       <p>It may have been superseded by a newer confirmation email, or the
       subscription was cancelled. You can subscribe again from the circulars page.</p>
-      <a class="btn" href="${SITE_URL}/circulars">Go to circulars</a>`,
+      <a class="btn" href="${SITE_URL}/dashboard/circulars">Go to circulars</a>`,
   });
   if (!UUID_RE.test(token)) return c.html(invalid.html, invalid.status);
 
@@ -265,7 +265,7 @@ app.get("/api/confirm", async (c) => {
     body: `<h1>✅ You're subscribed!</h1>
       <p>You'll get every new NPCI circular by email — summary, full text and
       the original PDF.</p>
-      <a class="btn" href="${SITE_URL}/circulars">Browse circulars</a>`,
+      <a class="btn" href="${SITE_URL}/dashboard/circulars">Browse circulars</a>`,
   });
   return c.html(ok.html, ok.status);
 });
@@ -310,7 +310,7 @@ app.get("/api/unsubscribe", async (c) => {
     body: `<h1>You're unsubscribed</h1>
       <p>You won't receive any more circular emails. Your details are no longer
       used for sends; write to us if you'd like them deleted entirely.</p>
-      <a class="btn" href="${SITE_URL}/circulars">Back to circulars</a>`,
+      <a class="btn" href="${SITE_URL}/dashboard/circulars">Back to circulars</a>`,
   });
   return c.html(ok.html, ok.status);
 });
