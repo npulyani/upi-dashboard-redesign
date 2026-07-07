@@ -85,7 +85,7 @@ function writeIssueBody(markdown) {
   return path;
 }
 
-function finish(status, { newCirculars = [], warnings = [] } = {}) {
+function finish(status, { newCirculars = [], warnings = [], notes = [] } = {}) {
   const lines = ["## Circulars ingest", "", `**Status:** ${status}`, ""];
   if (newCirculars.length > 0) {
     lines.push(`### ${newCirculars.length} new circular(s)`, "");
@@ -93,6 +93,9 @@ function finish(status, { newCirculars = [], warnings = [] } = {}) {
       lines.push(`- ${c.oc_number ?? "(no OC number)"} — ${c.oc_name ?? c.file_name}`);
     }
     lines.push("");
+  }
+  if (notes.length > 0) {
+    lines.push(...notes);
   }
   if (warnings.length > 0) {
     lines.push(`### ⚠ Warnings (${warnings.length})`, "", "```");
@@ -226,7 +229,57 @@ try {
   warnings.push(err.message);
 }
 
+// ---------------------------------------------------------------------------
+// Subscriber notifications — the server owns sending (Resend key, templates,
+// unsubscribe tokens all live there, see server/README.md); this run only
+// triggers it. Called unconditionally, same self-healing idiom as the steps
+// above: the endpoint's per-pair send log dedupes and its epoch floor guards
+// the back-catalog, so re-runs resume interrupted sends without double-mailing.
+// ---------------------------------------------------------------------------
+const NOTIFY_SERVER_URL = (env.NOTIFY_SERVER_URL ?? process.env.NOTIFY_SERVER_URL ?? "").replace(
+  /\/$/,
+  "",
+);
+const NOTIFY_SECRET = env.NOTIFY_SECRET ?? process.env.NOTIFY_SECRET;
+const notes = [];
+if (!NOTIFY_SERVER_URL || !NOTIFY_SECRET) {
+  warnings.push("subscriber notify skipped — NOTIFY_SERVER_URL / NOTIFY_SECRET not configured");
+} else {
+  try {
+    // The endpoint responds only after its send loop (throttled to Resend's
+    // 2 req/s) finishes — generous timeout. If the subscriber list ever grows
+    // past a few hundred, move sending server-side into a background job.
+    const res = await fetch(`${NOTIFY_SERVER_URL}/api/notify-circulars`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${NOTIFY_SECRET}`, "content-type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(10 * 60_000),
+    });
+    const report = await res.json().catch(() => null);
+    if (!res.ok || !report) {
+      throw new Error(`endpoint returned ${res.status}${report?.error ? `: ${report.error}` : ""}`);
+    }
+    const { sent = 0, failed: sendsFailed = 0, skipped = 0 } = report.totals ?? {};
+    console.log(`\nnotify: sent=${sent} failed=${sendsFailed} skipped=${skipped}`);
+    if (sendsFailed > 0) {
+      warnings.push(`${sendsFailed} notification email(s) failed to send (auto-retried next run)`);
+    }
+    if (sent > 0) {
+      const mailed = report.circulars.filter((c) => c.sent > 0);
+      notes.push(
+        "### 📬 Subscriber notifications",
+        "",
+        `Sent ${sent} email(s) for: ${mailed.map((c) => c.oc_number).join(", ")}`,
+        "",
+      );
+    }
+  } catch (err) {
+    warnings.push(`subscriber notify call failed: ${err.message}`);
+  }
+}
+
 finish(failed ? "failed" : newCirculars.length > 0 ? "ingested" : "no_new", {
   newCirculars,
   warnings,
+  notes,
 });

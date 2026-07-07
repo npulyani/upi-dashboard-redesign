@@ -40,6 +40,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Subscriber notifications (server/README.md): the Railway server's
+          # public URL + the same NOTIFY_SECRET set in its variables.
+          NOTIFY_SERVER_URL: ${{ secrets.NOTIFY_SERVER_URL }}
+          NOTIFY_SECRET: ${{ secrets.NOTIFY_SECRET }}
 
       - name: Open notification issue
         if: >
