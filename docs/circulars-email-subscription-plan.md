@@ -200,8 +200,14 @@ The only implementation detail worth settling now is **how emails get sent**, si
   bounce/complaint webhook. Chosen over Supabase Edge Functions to keep one
   runtime (Node) across scripts and server; chosen over a VPS to stay managed.
 - **Scheduled ingestion stays on GitHub Actions** — free (public repo),
-  observable (issue notifications), queued concurrency, manual dispatch. The
-  send-on-new-circular step will also live there, reading `circular_subscribers`.
+  observable (issue notifications), queued concurrency, manual dispatch.
+- **Send step revised 2026-07-08:** the Action *triggers* sending by calling
+  the server's `POST /api/notify-circulars` (Bearer `NOTIFY_SECRET`) at the
+  end of each ingest run; sending itself lives on the server, where the Resend
+  key, templates and unsubscribe tokens already live. The endpoint is
+  pull-based and idempotent (per-pair send log in `circular_notifications`,
+  epoch floor so the back-catalog is never mailed), so the Action calls it
+  unconditionally — same self-healing idiom as the rest of the pipeline.
 - **Decision rule:** the server only gets paths that must respond to an
   external event in real time. Batch → Actions; reads → browser → Supabase.
 - **Data:** `circular_subscribers` table (migration

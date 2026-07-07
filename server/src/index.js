@@ -21,8 +21,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createClient } from "@supabase/supabase-js";
 import { Webhook } from "svix";
-import { randomUUID } from "node:crypto";
-import { confirmationEmail, escapeHtml } from "./emails.js";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { confirmationEmail, notificationEmail, escapeHtml } from "./emails.js";
 
 // ---------------------------------------------------------------------------
 // Env
@@ -31,6 +31,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
+// Shared secret the ingest GitHub Action presents to /api/notify-circulars.
+const NOTIFY_SECRET = process.env.NOTIFY_SECRET;
 const SITE_URL = (process.env.SITE_URL ?? "https://upidashboard.com").replace(/\/$/, "");
 // The URL this server is reachable at — used to build confirm/unsubscribe
 // links in emails. On Railway: the generated (or custom) domain.
@@ -44,6 +46,7 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 }
 if (!RESEND_API_KEY) console.warn("RESEND_API_KEY not set — confirmation emails will fail");
 if (!PUBLIC_SERVER_URL) console.warn("PUBLIC_SERVER_URL not set — email links can't be built");
+if (!NOTIFY_SECRET) console.warn("NOTIFY_SECRET not set — /api/notify-circulars is disabled");
 
 // Node 20 lacks native WebSocket — same workaround as scripts/ and
 // src/lib/supabase.ts. Realtime is never used here, but supabase-js
@@ -87,17 +90,40 @@ setInterval(() => {
   }
 }, RATE_WINDOW_MS).unref();
 
-async function sendEmail({ to, subject, html, text }) {
+async function sendEmail({ to, subject, html, text, attachments, headers }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: MAIL_FROM, to, subject, html, text }),
+    body: JSON.stringify({
+      from: MAIL_FROM,
+      to,
+      subject,
+      html,
+      text,
+      ...(attachments?.length ? { attachments } : {}),
+      ...(headers ? { headers } : {}),
+    }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
   return res.json();
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Circulars created before this instant are back-catalog: never emailed, no
+// matter how empty the send log is. Same epoch-floor pattern as the NEW badge.
+const NOTIFY_EPOCH = "2026-07-08T00:00:00Z";
+
+// Constant-time bearer check (hash both sides so lengths always match).
+function bearerMatches(authorizationHeader, secret) {
+  const token = authorizationHeader?.startsWith("Bearer ") ? authorizationHeader.slice(7) : "";
+  return timingSafeEqual(
+    createHash("sha256").update(token).digest(),
+    createHash("sha256").update(secret).digest(),
+  );
 }
 
 // Minimal standalone page for the confirm/unsubscribe links — they're opened
@@ -273,27 +299,21 @@ app.get("/api/confirm", async (c) => {
 // ---------------------------------------------------------------------------
 // GET /api/unsubscribe?token=
 // ---------------------------------------------------------------------------
-app.get("/api/unsubscribe", async (c) => {
-  const token = c.req.query("token") ?? "";
-  const invalid = page({
-    title: "Link not valid",
-    status: 400,
-    body: `<h1>This link is not valid</h1>
-      <p>If you're trying to unsubscribe, use the link from the most recent
-      email — or write to us and we'll remove you manually.</p>`,
-  });
-  if (!UUID_RE.test(token)) return c.html(invalid.html, invalid.status);
-
+// Shared by the GET link (renders a page) and the RFC 8058 one-click POST
+// (mail clients hit it headlessly, expect a bare 2xx). Returns
+// 'ok' | 'invalid' | 'error'.
+async function unsubscribeByToken(token) {
+  if (!UUID_RE.test(token)) return "invalid";
   const { data: sub, error } = await supabase
     .from("circular_subscribers")
     .select("id, status")
     .eq("token", token)
     .maybeSingle();
-  if (error || !sub) {
-    if (error) console.error("unsubscribe lookup failed:", error.message);
-    return c.html(invalid.html, invalid.status);
+  if (error) {
+    console.error("unsubscribe lookup failed:", error.message);
+    return "error";
   }
-
+  if (!sub) return "invalid";
   if (sub.status !== "unsubscribed") {
     const { error: updateError } = await supabase
       .from("circular_subscribers")
@@ -301,8 +321,32 @@ app.get("/api/unsubscribe", async (c) => {
       .eq("id", sub.id);
     if (updateError) {
       console.error("unsubscribe update failed:", updateError.message);
-      return c.html(page({ title: "Error", body: "<h1>Something went wrong</h1><p>Please try the link again in a minute.</p>" }).html, 500);
+      return "error";
     }
+  }
+  return "ok";
+}
+
+app.post("/api/unsubscribe", async (c) => {
+  const result = await unsubscribeByToken(c.req.query("token") ?? "");
+  if (result === "error") return c.json({ ok: false }, 500);
+  return c.json({ ok: result === "ok" }, result === "ok" ? 200 : 400);
+});
+
+app.get("/api/unsubscribe", async (c) => {
+  const result = await unsubscribeByToken(c.req.query("token") ?? "");
+  if (result === "invalid") {
+    const invalid = page({
+      title: "Link not valid",
+      status: 400,
+      body: `<h1>This link is not valid</h1>
+        <p>If you're trying to unsubscribe, use the link from the most recent
+        email — or write to us and we'll remove you manually.</p>`,
+    });
+    return c.html(invalid.html, invalid.status);
+  }
+  if (result === "error") {
+    return c.html(page({ title: "Error", body: "<h1>Something went wrong</h1><p>Please try the link again in a minute.</p>" }).html, 500);
   }
 
   const ok = page({
@@ -313,6 +357,120 @@ app.get("/api/unsubscribe", async (c) => {
       <a class="btn" href="${SITE_URL}/dashboard/circulars">Back to circulars</a>`,
   });
   return c.html(ok.html, ok.status);
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/notify-circulars — email confirmed subscribers about new circulars
+// ---------------------------------------------------------------------------
+// Called unconditionally at the end of every ingest run: GitHub Actions owns
+// *when*, this endpoint owns *how to email people*. Pull-based and
+// self-healing — it finds summarized circulars past NOTIFY_EPOCH lacking a
+// send-log row per subscriber, so re-calls resume interrupted sends without
+// duplicating delivered mail. Body { "dry_run": true } previews without
+// sending. Auth: Authorization: Bearer <NOTIFY_SECRET>.
+app.post("/api/notify-circulars", async (c) => {
+  if (!NOTIFY_SECRET) return c.json({ ok: false, error: "Notify not configured." }, 503);
+  if (!bearerMatches(c.req.header("authorization"), NOTIFY_SECRET)) {
+    return c.json({ ok: false, error: "Unauthorized." }, 401);
+  }
+  const dryRun = (await c.req.json().catch(() => ({}))).dry_run === true;
+
+  const [circularsRes, subscribersRes] = await Promise.all([
+    supabase
+      .from("npci_circulars")
+      .select("id, oc_number, oc_name, doc_reference, file_name, doc_date, storage_path, content_text, summary")
+      .eq("summary_status", "done")
+      .gte("created_at", NOTIFY_EPOCH)
+      .order("id", { ascending: true }),
+    supabase.from("circular_subscribers").select("id, email, token").eq("status", "confirmed"),
+  ]);
+  if (circularsRes.error || subscribersRes.error) {
+    console.error("notify lookup failed:", (circularsRes.error ?? subscribersRes.error).message);
+    return c.json({ ok: false, error: "Lookup failed." }, 500);
+  }
+  const circulars = circularsRes.data;
+  const subscribers = subscribersRes.data;
+  if (circulars.length === 0 || subscribers.length === 0) {
+    return c.json({ ok: true, dry_run: dryRun, circulars: [], totals: { sent: 0, failed: 0, skipped: 0 } });
+  }
+
+  const { data: sentLog, error: logError } = await supabase
+    .from("circular_notifications")
+    .select("circular_id, subscriber_id")
+    .in("circular_id", circulars.map((circ) => circ.id));
+  if (logError) {
+    console.error("notify send-log lookup failed:", logError.message);
+    return c.json({ ok: false, error: "Send-log lookup failed." }, 500);
+  }
+  const alreadySent = new Set(sentLog.map((row) => `${row.circular_id}:${row.subscriber_id}`));
+
+  const report = [];
+  const totals = { sent: 0, failed: 0, skipped: 0 };
+  for (const circular of circulars) {
+    const pending = subscribers.filter((s) => !alreadySent.has(`${circular.id}:${s.id}`));
+    const entry = {
+      oc_number: circular.oc_number ?? circular.file_name,
+      recipients: pending.length,
+      sent: 0,
+      failed: 0,
+      skipped: subscribers.length - pending.length,
+    };
+    totals.skipped += entry.skipped;
+    report.push(entry);
+    if (pending.length === 0 || dryRun) continue;
+
+    // One storage download per circular; skip the attachment (the view link
+    // stays) if the PDF would push the message past Resend's 40 MB cap.
+    let attachments;
+    if (circular.storage_path) {
+      const { data: blob, error: dlError } = await supabase.storage
+        .from("circulars")
+        .download(circular.storage_path);
+      if (dlError) {
+        console.error(`notify: PDF download failed for ${entry.oc_number}:`, dlError.message);
+      } else if (blob.size <= 35 * 1024 * 1024) {
+        attachments = [
+          {
+            filename: circular.file_name ?? `${circular.oc_number}.pdf`,
+            content: Buffer.from(await blob.arrayBuffer()).toString("base64"),
+          },
+        ];
+      }
+    }
+    const viewUrl = circular.oc_number
+      ? `${SITE_URL}/dashboard/circulars/${encodeURIComponent(circular.oc_number)}`
+      : `${SITE_URL}/dashboard/circulars`;
+
+    for (const subscriber of pending) {
+      const unsubscribeUrl = `${PUBLIC_SERVER_URL}/api/unsubscribe?token=${subscriber.token}`;
+      try {
+        const { id: resendId } = await sendEmail({
+          to: subscriber.email,
+          ...notificationEmail({ circular, summary: circular.summary, viewUrl, unsubscribeUrl }),
+          attachments,
+          headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        });
+        const { error: insertError } = await supabase
+          .from("circular_notifications")
+          .insert({ circular_id: circular.id, subscriber_id: subscriber.id, resend_id: resendId });
+        // A failed log insert after a successful send risks a duplicate next
+        // run — log loudly; that's the safe side of at-least-once.
+        if (insertError) console.error("notify: send-log insert failed:", insertError.message);
+        entry.sent += 1;
+        totals.sent += 1;
+      } catch (err) {
+        console.error(`notify: send to ${subscriber.email} failed:`, err.message);
+        entry.failed += 1;
+        totals.failed += 1;
+      }
+      await sleep(600); // Resend free tier allows 2 requests/second
+    }
+  }
+
+  return c.json({ ok: totals.failed === 0, dry_run: dryRun, circulars: report, totals });
 });
 
 // ---------------------------------------------------------------------------
