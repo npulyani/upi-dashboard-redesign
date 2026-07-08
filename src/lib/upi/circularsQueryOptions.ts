@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { supabase } from "../supabase";
 import { CircularRow } from "./types";
+import { NEW_BADGE_EPOCH } from "./circularText";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -161,5 +162,25 @@ export const circularQuery = (key: string) =>
   queryOptions({
     queryKey: ["upi", "circular", key],
     queryFn: () => fetchCircularByKey(key),
+    staleTime: HOUR,
+  });
+
+// Homepage "new circulars" banner. Same 30-day-since-created_at window as the
+// list page's "New" badge (isNewCircular) — count-only via head:true so the
+// banner never pulls circular rows just to show a number.
+async function fetchNewCircularsCount(days = 30): Promise<number> {
+  const threshold = Math.max(NEW_BADGE_EPOCH, Date.now() - days * 86_400_000);
+  const { count, error } = await supabase
+    .from("npci_circulars")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", new Date(threshold).toISOString());
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export const newCircularsCountQuery = () =>
+  queryOptions({
+    queryKey: ["upi", "newCircularsCount"],
+    queryFn: () => fetchNewCircularsCount(),
     staleTime: HOUR,
   });

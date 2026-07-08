@@ -83,4 +83,7 @@ export const analytics = {
   circularSubscribeSubmitted(success: boolean) {
     capture("circular_subscribe_submitted", { success });
   },
+  newCircularsBannerClicked(count: number) {
+    capture("new_circulars_banner_clicked", { count });
+  },
 };

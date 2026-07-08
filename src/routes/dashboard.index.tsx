@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboard } from "@/components/upi/DashboardContext";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
+import { NewCircularsBanner } from "@/components/upi/NewCircularsBanner";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankMovers } from "@/components/upi/RankMovers";
@@ -22,7 +23,6 @@ import {
   useUniqueApps,
 } from "@/lib/upi/hooks";
 import { calcPerCapita, calcSpendsPerCapita } from "@/lib/upi/population";
-import { generateNarrative } from "@/lib/upi/insights";
 import { latestMccMonth, mccForMonth, pickMccMetric } from "@/lib/upi/mcc";
 import { SeasonalityHeatmap } from "@/components/upi/SeasonalityHeatmap";
 import { MapMetric } from "@/lib/upi/types";
@@ -119,6 +119,15 @@ function OverviewPage() {
   );
   const mom = prevTotal ? ((total - prevTotal) / prevTotal) * 100 : 0;
 
+  // Volume/value totals independent of the metric toggle — "This month in
+  // UPI" always shows both, unlike the toggle-driven hero card below it.
+  const totalVolumeMn = useMemo(() => current.reduce((a, r) => a + r.cit_volume_mn, 0), [current]);
+  const totalValueCr = useMemo(() => current.reduce((a, r) => a + r.cit_value_cr, 0), [current]);
+  const prevVolumeMn = useMemo(() => previous.reduce((a, r) => a + r.cit_volume_mn, 0), [previous]);
+  const prevValueCr = useMemo(() => previous.reduce((a, r) => a + r.cit_value_cr, 0), [previous]);
+  const momVolume = prevVolumeMn ? ((totalVolumeMn - prevVolumeMn) / prevVolumeMn) * 100 : 0;
+  const momValue = prevValueCr ? ((totalValueCr - prevValueCr) / prevValueCr) * 100 : 0;
+
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
 
@@ -177,11 +186,6 @@ function OverviewPage() {
       .sort((a, b) => b.metricValue - a.metricValue);
   }, [stateData, metric, mapMetric, populations]);
 
-  const narrative = useMemo(
-    () => generateNarrative(month, year, current, previous, metric, stateLeaderboard.slice(0, 2)),
-    [month, year, current, previous, metric, stateLeaderboard],
-  );
-
   // Largest merchant category for the selected month (falls back to latest MCC month).
   const { mccRows } = useMccData();
   const topCategory = useMemo(() => {
@@ -209,27 +213,27 @@ function OverviewPage() {
       ? `${(total / 1000).toFixed(2)}B`
       : `₹${(total / 100000).toFixed(2)}L Cr`;
 
-  const top2Share =
-    (((sorted[0]?.cit_volume_mn ?? 0) + (sorted[1]?.cit_volume_mn ?? 0)) /
-      (current.reduce((a, b) => a + b.cit_volume_mn, 0) || 1)) *
-    100;
-
   return (
     <div className="grid grid-cols-12 gap-5">
-      {/* Narrative + key stats */}
-      {narrative && (
+      <div className="col-span-12">
+        <NewCircularsBanner />
+      </div>
+
+      {/* Key stats, as metric tiles */}
+      {current.length > 0 && (
         <BentoCard className="col-span-12" tone="dark">
           <CardLabel className="text-background/60">This month in UPI</CardLabel>
-          <p className="font-serif text-xl lg:text-2xl mt-2 leading-snug text-background">
-            {narrative}
-            {topCategory && (
-              <> The biggest merchant category is {topCategory.top.description}.</>
-            )}
-          </p>
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Stat label="Apps" value={String(current.length)} />
-            <Stat label="Top 2 share" value={`${top2Share.toFixed(0)}%`} />
-            <Stat label="MoM" value={`${mom >= 0 ? "+" : ""}${mom.toFixed(1)}%`} />
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <Stat
+              label="Total volume"
+              value={`${(totalVolumeMn / 1000).toFixed(2)}B`}
+              delta={momVolume}
+            />
+            <Stat
+              label="Total value"
+              value={`₹${(totalValueCr / 100000).toFixed(2)}L Cr`}
+              delta={momValue}
+            />
             {topCategory && (
               <Link to="/dashboard/spending" className="block hover:opacity-80 transition-opacity">
                 <Stat label="Top category" value={topCategory.top.description} />
@@ -468,11 +472,18 @@ function OverviewPage() {
 }
 
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, delta }: { label: string; value: string; delta?: number }) {
   return (
     <div>
       <p className="font-mono text-[9px] uppercase tracking-widest text-background/50">{label}</p>
-      <p className="font-serif text-2xl mt-1 text-background">{value}</p>
+      <p className="font-serif text-3xl mt-1.5 text-background">{value}</p>
+      {delta != null && (
+        <p
+          className={`font-mono text-xs mt-1.5 ${delta >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+        >
+          {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}% vs prev month
+        </p>
+      )}
     </div>
   );
 }

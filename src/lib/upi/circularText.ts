@@ -99,7 +99,7 @@ export function isFutureDeadline(deadline: string | null): boolean {
  * for the feature's first month. Rows from 2026-07-03 onward are organic
  * fetches of genuinely new circulars.
  */
-const NEW_BADGE_EPOCH = Date.parse("2026-07-03T00:00:00Z");
+export const NEW_BADGE_EPOCH = Date.parse("2026-07-03T00:00:00Z");
 
 export function isNewCircular(createdAt: string | null | undefined, days = 30): boolean {
   if (!createdAt) return false;

@@ -18,6 +18,7 @@ import {
   circularQuery,
   circularsInfiniteQuery,
   circularYearsQuery,
+  newCircularsCountQuery,
   CircularFamilyMember,
   SearchQuery,
 } from "./circularsQueryOptions";
@@ -139,6 +140,12 @@ export function useCircularsSearch(term: string, year: number | null, enabled: b
 export function useCircularYears() {
   const { data } = useQuery(circularYearsQuery());
   return data ?? EMPTY_YEARS;
+}
+
+/** Count of circulars added to the dashboard in the last 30 days — homepage banner. */
+export function useNewCircularsCount(): number {
+  const { data } = useQuery(newCircularsCountQuery());
+  return data ?? 0;
 }
 
 export interface CircularFamily {
