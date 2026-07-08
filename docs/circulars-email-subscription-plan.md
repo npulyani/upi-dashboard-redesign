@@ -1,7 +1,7 @@
 # Circulars Email Subscription — Feature Brainstorm
 
-**Status:** Brainstorm / wireframe only — no tech plan yet (except the email service section, included by request).
-**Date:** 2026-07-06
+**Status (2026-07-08):** Backend live on branch `circulars-email-subscription` — subscribe/confirm/unsubscribe/notify all working end to end, verified in production dry-run. Frontend (subscribe modal) and admin subscriber view are not built yet. Wireframes below are still the target design for those. See [Implementation status](#implementation-status) for what's actually running.
+**Date:** 2026-07-06 (brainstorm) — updated 2026-07-08
 
 ## What it is
 
@@ -35,12 +35,12 @@ The site owner (admin) can view and manage the subscriber list.
 
 ### 3. Subscriber management (admin)
 
-- Admin-only view (not linked from public nav) to:
-  - See all subscribers: name, email, company, role, status (pending / confirmed / unsubscribed / bounced), subscribed date.
-  - Search / filter by status, company, role.
-  - Manually remove (or re-activate) a subscriber.
-  - Export the list as CSV.
-- Bounce / complaint handling: repeated hard bounces automatically flip a subscriber to **bounced** so we stop mailing them.
+- **Decided 2026-07-08: no custom admin UI.** Manage subscribers directly via
+  Supabase Studio's Table Editor on the `circular_subscribers` table —
+  project-owner login bypasses RLS, so view/search/filter/edit/delete/export
+  CSV are all already available with zero extra build. See Implementation
+  status below for why a bespoke page would just duplicate this.
+- Bounce / complaint handling: repeated hard bounces automatically flip a subscriber to **bounced** so we stop mailing them (already live via the Resend webhook).
 
 ### 4. Data privacy
 
@@ -52,6 +52,58 @@ The site owner (admin) can view and manage the subscriber list.
 - Unsubscribe is honored immediately and removes the subscriber from all future sends.
 
 ---
+
+## Implementation status
+
+Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
+
+- **`server/` — a small always-on Node service on Railway.** The static GitHub Pages
+  build can't hold secrets or receive webhooks, so this is the one non-static
+  piece of the stack. Plain ESM + Hono, no build step, deployed from the same
+  repo (Railway watches `server/**`). Full endpoint reference and env-var list:
+  [server/README.md](../server/README.md).
+- **Endpoints, all live:** `POST /api/subscribe` (validates, honeypot + per-IP
+  rate limit, upserts a `pending` row, sends the double-opt-in email),
+  `GET /api/confirm` (flips `pending → confirmed`, standalone success page —
+  these render outside the SPA since they're opened from email clients),
+  `GET/POST /api/unsubscribe` (also serves RFC 8058 one-click unsubscribe),
+  `POST /api/notify-circulars` (the send step, see below), `POST
+  /api/webhooks/resend` (bounce/complaint → flips subscriber to `bounced`).
+- **DB:** two new Supabase tables, `circular_subscribers` and
+  `circular_notifications` (migrations `add_circular_subscribers.sql` /
+  `add_circular_notifications.sql`, applied). Both have RLS **enabled with
+  zero policies on purpose** — service-role (the server) only, invisible to
+  the anon key. Do not "fix" this the way [statewise RLS gotcha] was fixed;
+  here no-policy is the intended posture, not a bug.
+- **Send step is pull-based and idempotent, not push-triggered:** the ingest
+  GitHub Action (`scripts/run_circulars_update.mjs`, commit f70287a) calls
+  `POST /api/notify-circulars` unconditionally at the end of every run. The
+  endpoint itself finds summarized circulars past a `NOTIFY_EPOCH`
+  (2026-07-08 — same epoch-floor pattern as the frontend's NEW badge, so the
+  back-catalog of ~240 already-summarized circulars is never mailed) that
+  lack a `circular_notifications` row per confirmed subscriber, and sends
+  only those pairs. Re-running after a partial failure resumes without
+  duplicate sends. Supports `{"dry_run": true}` to preview counts with no
+  sends.
+- **Architecture rule locked in:** the server only answers real-time events
+  (a click, a webhook). Ingest, OCR, summarization, and the notify trigger
+  itself all stay batch jobs in GitHub Actions. Site reads never proxy
+  through the server — browser talks to Supabase directly, same as before
+  this feature existed.
+- **Email service decided and configured:** Resend, with `mail.upidashboard.com`
+  verified as the sending subdomain and `circulars@mail.upidashboard.com` as
+  the from-address (isolates this feature's sender reputation from the rest
+  of the domain). Bounce/complaint webhook wired to `/api/webhooks/resend`.
+- **Verified in production:** subscribe → confirmation email → confirmed row
+  (user-tested end to end 2026-07-08); notify endpoint dry-run tested against
+  prod data.
+- **Not built yet:** the subscribe-form frontend (still just the wireframes
+  below), the welcome email (see Open questions #3), and merging this branch
+  to `main` (the notify call is inert until then, since the ingest cron runs
+  `main`'s workflow). No admin UI to build — see §3 above.
+- **Pending before this is fully live:** add `NOTIFY_SERVER_URL` +
+  `NOTIFY_SECRET` as GitHub repo secrets, a `workflow_dispatch` test run on
+  this branch, then the frontend + welcome-email work above, then merge.
 
 ## Wireframes
 
@@ -180,16 +232,15 @@ The site owner (admin) can view and manage the subscriber list.
 
 ## Email service (the one technical piece)
 
-The only implementation detail worth settling now is **how emails get sent**, since everything else hangs off it.
+**Decided and live: [Resend](https://resend.com).** Simple REST API, generous free tier (~3k emails/month, 100/day), supports attachments up to 40 MB total, and built-in webhook events for bounces/complaints (feeds the `bounced` status). Account created and `mail.upidashboard.com` verified (SPF + DKIM) 2026-07-07.
 
-- **Recommended: [Resend](https://resend.com)** — simple REST API, generous free tier (~3k emails/month, 100/day), supports attachments up to 40 MB total, React Email templates if we ever want richer HTML, and built-in webhook events for bounces/complaints (needed for the admin status column). Requires verifying the `upidashboard.com` domain (SPF + DKIM DNS records) so mails don't land in spam.
-- **Alternatives considered:**
+- **Alternatives considered, not chosen:**
   - **Amazon SES** — cheapest at scale ($0.10/1k), but more setup friction (sandbox exit request, IAM, bounce handling via SNS). Overkill until subscriber count is large.
   - **Postmark** — best-in-class deliverability for transactional mail, but paid from the start (~$15/month).
   - **Brevo / Mailchimp-style platforms** — bring their own list management UI, but heavyweight, branded footers on free tiers, and awkward for per-circular transactional sends with attachments.
-- **Sending model:** transactional sends (one API call per subscriber per circular) triggered from the existing ingestion GitHub Action after a new circular is stored. No marketing-platform "campaigns" — the circular *is* the content.
-- **Attachment note:** NPCI PDFs are typically well under attachment limits, but the send step should fall back to a download link if a PDF ever exceeds the provider cap.
-- **From address:** something like `circulars@upidashboard.com` (subdomain `mail.upidashboard.com` is an option to isolate sender reputation).
+- **Sending model, as built:** transactional sends (one API call per subscriber per circular), triggered by the ingest GitHub Action but actually sent by `server/`'s `/api/notify-circulars` (the Action holds no Resend key — see Implementation status above). No marketing-platform "campaigns" — the circular *is* the content.
+- **Attachment note, as built:** the notify endpoint downloads the PDF from Supabase Storage and skips the attachment (keeping the view-on-site link) if it would push the message past 35 MB, leaving headroom under Resend's 40 MB cap.
+- **From address, as built:** `circulars@mail.upidashboard.com` on the verified subdomain, isolating this feature's sender reputation from the rest of `upidashboard.com`. No-reply in practice — no inbound routing configured; replies go nowhere. Revisit if that turns out to matter.
 
 ---
 
@@ -217,8 +268,8 @@ The only implementation detail worth settling now is **how emails get sent**, si
 
 ## Open questions
 
-1. **Digest vs. per-circular emails** when a single ingestion run finds several circulars (NPCI sometimes publishes in bursts). Per-circular is simpler and keeps the PDF-attachment model clean; a digest is less noisy.
-2. **Should full text be in the email body** or just summary + PDF? Full text makes very long emails (Gmail clips at ~102 KB); an excerpt + link may be the better default.
-3. **Backfill welcome email** — when someone subscribes, do they get the latest circular immediately as a taste, or only future ones?
-4. **Admin auth** — the dashboard is a static public site today; the admin view needs some form of gating (decide with tech plan).
-5. **Rate/abuse protection** on the subscribe form (honeypot field vs. captcha).
+1. ~~Digest vs. per-circular emails~~ — **Resolved: per-circular**, as built. One email per circular; a burst of NPCI publishes just means several emails in short succession, throttled by the notify loop (600ms between sends, Resend free-tier's 2 req/s cap).
+2. ~~Full text in email body vs. summary + PDF only~~ — **Resolved: full text in the body**, alongside summary and PDF, as built. Gmail's ~102 KB clip risk on very long circulars was accepted; the "View on upidashboard.com" link is placed above the full-text section so it's never lost even if a client clips the email.
+3. ~~Backfill welcome email~~ — **Resolved 2026-07-08:** yes. On confirmation, send a welcome email (separate from the plain "you're subscribed" confirm-page) containing the **last 3 circulars** (title, summary, link to PDF each) plus a line explaining that from now on they'll get an **individual email as soon as each new circular is fetched from NPCI**. This is distinct from `NOTIFY_EPOCH`, which still governs the *ongoing* per-circular sends — the welcome email is a one-time, separately-triggered digest of recent history, not a retroactive catch-up through the notify pipeline. Not built yet: needs a new email template (`welcomeEmail` in `server/src/emails.js`) and a query for the 3 most recent summarized circulars, fired from `GET /api/confirm` right after the status flip to `confirmed`.
+4. ~~Admin auth~~ — **Resolved 2026-07-08: not needed.** No custom admin view is being built (see §3 above) — Supabase Studio login is the access control.
+5. ~~Rate/abuse protection on the subscribe form~~ — **Resolved: both built.** Honeypot field (`website`) and a per-IP in-memory rate limit (5 submissions / 10 min) live in `POST /api/subscribe`. No captcha added; revisit only if abuse actually shows up.
