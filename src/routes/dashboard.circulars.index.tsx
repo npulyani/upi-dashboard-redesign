@@ -5,6 +5,7 @@ import { CircularSearchBox } from "@/components/upi/circulars/CircularSearchBox"
 import { CircularYearPills } from "@/components/upi/circulars/CircularYearPills";
 import { CircularCategoryPills } from "@/components/upi/circulars/CircularCategoryPills";
 import { CircularListItem } from "@/components/upi/circulars/CircularListItem";
+import { SubscribeCard } from "@/components/upi/circulars/SubscribeCard";
 import {
   useCircularFamily,
   useCircularsInfinite,
@@ -127,6 +128,8 @@ function CircularsPage() {
           .
         </p>
       </div>
+
+      <SubscribeCard />
 
       <CircularSearchBox
         value={rawSearch}
