@@ -97,13 +97,25 @@ Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
 - **Verified in production:** subscribe → confirmation email → confirmed row
   (user-tested end to end 2026-07-08); notify endpoint dry-run tested against
   prod data.
-- **Not built yet:** the subscribe-form frontend (still just the wireframes
-  below), the welcome email (see Open questions #3), and merging this branch
-  to `main` (the notify call is inert until then, since the ingest cron runs
-  `main`'s workflow). No admin UI to build — see §3 above.
+- **Frontend built (2026-07-09):** subscribe banner + modal form on the
+  circulars page (`src/components/upi/circulars/SubscribeCard.tsx`), matching
+  wireframes A–C. Posts to `/api/subscribe` with the honeypot field; role is
+  a dropdown with an "Other" free-text escape hatch. The server URL comes
+  from `VITE_SERVER_URL` (deploy workflow reuses the `NOTIFY_SERVER_URL`
+  secret); when unset the card doesn't render at all. PostHog events:
+  `circular_subscribe_opened` / `circular_subscribe_submitted` (no PII).
+- **Welcome email built (2026-07-09):** `welcomeEmail` template in
+  `server/src/emails.js`, fired from `GET /api/confirm` only on the actual
+  pending → confirmed flip (re-clicks skip it), best-effort so a send failure
+  never breaks the confirmation page. Contains the 3 most recent summarized
+  circulars (title, TL;DR, view link, public PDF link).
+- **Not done yet:** merging this branch to `main` (the notify call and the
+  subscribe card are inert until then, since the ingest cron and Pages deploy
+  both run from `main`). No admin UI to build — see §3 above.
 - **Pending before this is fully live:** add `NOTIFY_SERVER_URL` +
   `NOTIFY_SECRET` as GitHub repo secrets, a `workflow_dispatch` test run on
-  this branch, then the frontend + welcome-email work above, then merge.
+  this branch, redeploy the Railway service with the welcome-email commit,
+  then merge.
 
 ## Wireframes
 
@@ -270,6 +282,6 @@ Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
 
 1. ~~Digest vs. per-circular emails~~ — **Resolved: per-circular**, as built. One email per circular; a burst of NPCI publishes just means several emails in short succession, throttled by the notify loop (600ms between sends, Resend free-tier's 2 req/s cap).
 2. ~~Full text in email body vs. summary + PDF only~~ — **Resolved: full text in the body**, alongside summary and PDF, as built. Gmail's ~102 KB clip risk on very long circulars was accepted; the "View on upidashboard.com" link is placed above the full-text section so it's never lost even if a client clips the email.
-3. ~~Backfill welcome email~~ — **Resolved 2026-07-08:** yes. On confirmation, send a welcome email (separate from the plain "you're subscribed" confirm-page) containing the **last 3 circulars** (title, summary, link to PDF each) plus a line explaining that from now on they'll get an **individual email as soon as each new circular is fetched from NPCI**. This is distinct from `NOTIFY_EPOCH`, which still governs the *ongoing* per-circular sends — the welcome email is a one-time, separately-triggered digest of recent history, not a retroactive catch-up through the notify pipeline. Not built yet: needs a new email template (`welcomeEmail` in `server/src/emails.js`) and a query for the 3 most recent summarized circulars, fired from `GET /api/confirm` right after the status flip to `confirmed`.
+3. ~~Backfill welcome email~~ — **Resolved 2026-07-08:** yes. On confirmation, send a welcome email (separate from the plain "you're subscribed" confirm-page) containing the **last 3 circulars** (title, summary, link to PDF each) plus a line explaining that from now on they'll get an **individual email as soon as each new circular is fetched from NPCI**. This is distinct from `NOTIFY_EPOCH`, which still governs the *ongoing* per-circular sends — the welcome email is a one-time, separately-triggered digest of recent history, not a retroactive catch-up through the notify pipeline. **Built 2026-07-09** — see Implementation status.
 4. ~~Admin auth~~ — **Resolved 2026-07-08: not needed.** No custom admin view is being built (see §3 above) — Supabase Studio login is the access control.
 5. ~~Rate/abuse protection on the subscribe form~~ — **Resolved: both built.** Honeypot field (`website`) and a per-IP in-memory rate limit (5 submissions / 10 min) live in `POST /api/subscribe`. No captcha added; revisit only if abuse actually shows up.
