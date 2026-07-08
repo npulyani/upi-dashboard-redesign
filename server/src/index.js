@@ -22,7 +22,7 @@ import { cors } from "hono/cors";
 import { createClient } from "@supabase/supabase-js";
 import { Webhook } from "svix";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { confirmationEmail, notificationEmail, escapeHtml } from "./emails.js";
+import { confirmationEmail, notificationEmail, welcomeEmail, escapeHtml } from "./emails.js";
 
 // ---------------------------------------------------------------------------
 // Env
@@ -154,7 +154,14 @@ const app = new Hono();
 app.use(
   "/api/*",
   cors({
-    origin: [SITE_URL, "https://www.upidashboard.com", "http://localhost:5173", "http://localhost:4173"],
+    origin: [
+      SITE_URL,
+      "https://www.upidashboard.com",
+      // vite dev (8080 per vite.config), vite preview, legacy defaults
+      "http://localhost:8080",
+      "http://localhost:5173",
+      "http://localhost:4173",
+    ],
   }),
 );
 
@@ -246,6 +253,50 @@ app.post("/api/subscribe", async (c) => {
   return c.json({ ok: true });
 });
 
+// Welcome email on confirmation: a taste of the back catalog (the ongoing
+// notify pipeline only mails circulars newer than NOTIFY_EPOCH, so without
+// this a new subscriber's first real email could be weeks away).
+async function sendWelcomeEmail(subscriber) {
+  const { data: recent, error } = await supabase
+    .from("npci_circulars")
+    .select("oc_number, oc_name, doc_reference, file_name, doc_date, storage_path, summary")
+    .eq("summary_status", "done")
+    .order("doc_date", { ascending: false })
+    .limit(3);
+  if (error) throw new Error(`recent-circulars lookup failed: ${error.message}`);
+
+  const circulars = recent.map((circ) => ({
+    title: circ.oc_name ?? circ.doc_reference ?? circ.file_name,
+    ocLabel: circ.oc_number ?? "NPCI circular",
+    dateLabel: circ.doc_date
+      ? new Date(`${circ.doc_date}T00:00:00Z`).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+      : null,
+    tldr: circ.summary?.tldr ?? null,
+    viewUrl: circ.oc_number
+      ? `${SITE_URL}/dashboard/circulars/${encodeURIComponent(circ.oc_number)}`
+      : `${SITE_URL}/dashboard/circulars`,
+    // The circulars bucket is public — same URL shape the site itself uses.
+    pdfUrl: circ.storage_path
+      ? `${SUPABASE_URL}/storage/v1/object/public/circulars/${circ.storage_path.split("/").map(encodeURIComponent).join("/")}`
+      : null,
+  }));
+
+  const unsubscribeUrl = `${PUBLIC_SERVER_URL}/api/unsubscribe?token=${subscriber.token}`;
+  await sendEmail({
+    to: subscriber.email,
+    ...welcomeEmail({ name: subscriber.name, circulars, unsubscribeUrl }),
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/confirm?token=
 // ---------------------------------------------------------------------------
@@ -263,7 +314,7 @@ app.get("/api/confirm", async (c) => {
 
   const { data: sub, error } = await supabase
     .from("circular_subscribers")
-    .select("id, status")
+    .select("id, status, name, email, token")
     .eq("token", token)
     .maybeSingle();
   if (error) {
@@ -282,6 +333,14 @@ app.get("/api/confirm", async (c) => {
     if (updateError) {
       console.error("confirm update failed:", updateError.message);
       return c.html(page({ title: "Error", body: "<h1>Something went wrong</h1><p>Please try the link again in a minute.</p>" }).html, 500);
+    }
+    // One-time welcome email with the latest circulars. Only on the actual
+    // pending → confirmed flip (re-clicks skip this branch), and best-effort:
+    // a failure here must not break the confirmation page.
+    try {
+      await sendWelcomeEmail(sub);
+    } catch (err) {
+      console.error("welcome email failed:", err.message);
     }
   }
 

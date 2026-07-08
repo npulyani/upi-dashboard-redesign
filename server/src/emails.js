@@ -1,8 +1,6 @@
 /**
  * Email templates for the subscription flows. Kept as plain template strings —
- * no React Email until there's a reason. The circular-notification email
- * itself is NOT here: it's sent by the ingest pipeline in GitHub Actions,
- * which only shares the DB with this server, not code.
+ * no React Email until there's a reason.
  */
 
 const footerNote =
@@ -131,6 +129,69 @@ export function notificationEmail({ circular, summary, viewUrl, unsubscribeUrl }
   <h3 style="font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: #888; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px;">Full text</h3>
   <div style="font-size: 13px; line-height: 1.6; color: #333; white-space: pre-wrap;">${escapeHtml(circular.content_text ?? "")}</div>
 
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;">
+  <p style="font-size: 12px; color: #888;">${footerNote}<br>
+  <a href="${unsubscribeUrl}" style="color: #888;">Unsubscribe</a> — one click, effective immediately.</p>
+</div>`;
+  return { subject, html, text };
+}
+
+/**
+ * One-time welcome email, sent when a subscriber flips pending → confirmed.
+ * `circulars` is the last few summarized circulars, prepared by the caller as
+ * { title, ocLabel, dateLabel, tldr, viewUrl, pdfUrl } — display-ready so the
+ * template stays dumb. Future circulars arrive individually via
+ * notificationEmail; this is just a taste of the back catalog.
+ */
+export function welcomeEmail({ name, circulars, unsubscribeUrl }) {
+  const subject = "Welcome — you're subscribed to NPCI circular updates";
+  const intro =
+    "You're all set. From now on, every new NPCI circular lands in your inbox " +
+    "as soon as it's fetched — summary, full text and the original PDF. " +
+    "Here are the most recent ones to get you started:";
+
+  const itemsText = circulars.map((item) =>
+    [
+      `${item.ocLabel}${item.dateLabel ? ` · ${item.dateLabel}` : ""}`,
+      item.title,
+      item.tldr ?? "",
+      `View: ${item.viewUrl}`,
+      ...(item.pdfUrl ? [`PDF: ${item.pdfUrl}`] : []),
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+  const text = [
+    `Hi ${name},`,
+    "",
+    intro,
+    "",
+    itemsText.join("\n\n"),
+    "",
+    "—",
+    footerNote,
+    `Unsubscribe: ${unsubscribeUrl}`,
+  ].join("\n");
+
+  const itemsHtml = circulars
+    .map(
+      (item) => `
+  <div style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 16px; margin: 12px 0;">
+    <p style="font-size: 12px; color: #888; margin: 0;">${escapeHtml(item.ocLabel)}${item.dateLabel ? ` · ${escapeHtml(item.dateLabel)}` : ""}</p>
+    <p style="font-size: 15px; font-weight: 600; margin: 4px 0 8px;">${escapeHtml(item.title)}</p>
+    ${item.tldr ? `<p style="font-size: 13px; color: #555; line-height: 1.5; margin: 0 0 10px;">${escapeHtml(item.tldr)}</p>` : ""}
+    <p style="font-size: 13px; margin: 0;">
+      <a href="${item.viewUrl}" style="color: #1a1a1a; font-weight: 600;">View on upidashboard.com</a>${item.pdfUrl ? ` &nbsp;·&nbsp; <a href="${item.pdfUrl}" style="color: #1a1a1a;">Original PDF</a>` : ""}
+    </p>
+  </div>`,
+    )
+    .join("");
+  const html = `
+<div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+  <h2 style="font-size: 18px;">You're subscribed 🎉</h2>
+  <p>Hi ${escapeHtml(name)},</p>
+  <p style="line-height: 1.55;">${intro}</p>
+  ${itemsHtml}
   <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;">
   <p style="font-size: 12px; color: #888;">${footerNote}<br>
   <a href="${unsubscribeUrl}" style="color: #888;">Unsubscribe</a> — one click, effective immediately.</p>

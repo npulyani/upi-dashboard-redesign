@@ -13,7 +13,7 @@ site reads stay browser → Supabase direct.
 | Route | What it does |
 | --- | --- |
 | `POST /api/subscribe` | Subscribe form: validates, honeypot + per-IP rate limit, upserts a `pending` row in `circular_subscribers`, sends the double-opt-in email via Resend |
-| `GET /api/confirm?token=` | Confirmation link: flips `pending → confirmed`, renders a standalone success page |
+| `GET /api/confirm?token=` | Confirmation link: flips `pending → confirmed`, renders a standalone success page, and sends a one-time welcome email with the 3 most recent summarized circulars (best-effort, only on the actual flip) |
 | `GET /api/unsubscribe?token=` | Unsubscribe link from email footers, idempotent (a `POST` variant serves RFC 8058 one-click unsubscribe from mail clients) |
 | `POST /api/notify-circulars` | Emails confirmed subscribers about summarized circulars newer than `NOTIFY_EPOCH` that they haven't been sent yet (per-pair send log in `circular_notifications`). Called by the ingest Action after every run; safe to re-call. `Authorization: Bearer <NOTIFY_SECRET>`; body `{"dry_run": true}` previews without sending |
 | `POST /api/webhooks/resend` | Bounce/complaint events (svix-signed): flips subscriber to `bounced` |
