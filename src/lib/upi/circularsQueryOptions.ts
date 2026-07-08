@@ -8,11 +8,10 @@ export const CIRCULARS_PAGE_SIZE = 20;
 
 // List page: keep the paginated payload small — no content_text (it made
 // every page ~90KB+; keyword-search snippets now come from the client-side
-// corpus, see circularsSearch.ts) and only the two scoped summary keys the
-// row line renders (category badge + action-item deadline chip), not the
-// full jsonb.
+// corpus, see circularsSearch.ts) and only the scoped summary key the row
+// line renders (action-item deadline chip), not the full jsonb.
 const CIRCULAR_LIST_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, created_at, summary_category:summary->>category, summary_action_items:summary->action_items";
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, created_at, summary_action_items:summary->action_items";
 
 // Detail page: single-row fetch, fine to pull the full summary jsonb.
 const CIRCULAR_DETAIL_COLUMNS =
@@ -78,12 +77,10 @@ async function fetchCircularsPage({
   pageParam,
   year,
   search,
-  category,
 }: {
   pageParam: number;
   year: number | null;
   search: SearchQuery | null;
-  category: string | null;
 }): Promise<CircularRow[]> {
   // Browse + OC-number lookup only. Free-text keyword search never reaches
   // this query — it runs entirely in the browser over the downloaded corpus
@@ -102,20 +99,13 @@ async function fetchCircularsPage({
   if (search?.mode === "oc_number") {
     q = q.eq("oc_base", search.base);
   }
-  if (category != null) {
-    q = q.eq("summary->>category", category);
-  }
 
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as CircularRow[];
 }
 
-export function circularsInfiniteQuery(
-  year: number | null,
-  search: SearchQuery | null,
-  category: string | null = null,
-) {
+export function circularsInfiniteQuery(year: number | null, search: SearchQuery | null) {
   return infiniteQueryOptions({
     queryKey: [
       "upi",
@@ -123,9 +113,8 @@ export function circularsInfiniteQuery(
       year ?? "all",
       search?.mode ?? "none",
       search?.mode === "oc_number" ? search.base : (search?.term ?? ""),
-      category ?? "all",
     ],
-    queryFn: ({ pageParam }) => fetchCircularsPage({ pageParam, year, search, category }),
+    queryFn: ({ pageParam }) => fetchCircularsPage({ pageParam, year, search }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length < CIRCULARS_PAGE_SIZE ? undefined : allPages.length * CIRCULARS_PAGE_SIZE,

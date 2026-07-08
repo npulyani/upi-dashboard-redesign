@@ -45,7 +45,6 @@ const MINISEARCH_OPTIONS = {
 
 export interface CircularsSearchFilters {
   year: number | null;
-  category: string | null;
 }
 
 export interface CircularsSearchEngine {
@@ -73,13 +72,12 @@ function buildEngine(corpus: CircularsCorpus): CircularsSearchEngine {
   const byId = new Map(corpus.rows.map((r) => [r.id, r]));
 
   return {
-    search(term, { year, category }) {
+    search(term, { year }) {
       const rows: CircularRow[] = [];
       for (const hit of mini.search(term)) {
         const row = byId.get(hit.id as number);
         if (!row) continue;
         if (!matchesYear(row, year)) continue;
-        if (category != null && row.summary_category !== category) continue;
         rows.push(row);
       }
       return rows;

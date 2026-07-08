@@ -111,14 +111,13 @@ export function useMccData() {
   return { mccRows: data ?? EMPTY_MCC, isPending };
 }
 
-/** Paginated NPCI circulars, refetching from page 0 whenever year/search/category change. */
+/** Paginated NPCI circulars, refetching from page 0 whenever year/search change. */
 export function useCircularsInfinite(
   year: number | null,
   search: SearchQuery | null,
-  category: string | null = null,
   enabled = true,
 ) {
-  const query = useInfiniteQuery({ ...circularsInfiniteQuery(year, search, category), enabled });
+  const query = useInfiniteQuery({ ...circularsInfiniteQuery(year, search), enabled });
   const rows = useMemo(() => query.data?.pages.flat() ?? EMPTY_CIRCULARS, [query.data]);
   return { rows, ...query };
 }
@@ -128,16 +127,11 @@ export function useCircularsInfinite(
  * lazily (pass enabled=true once the user shows search intent) and every
  * search afterwards is a synchronous in-memory lookup — no DB round-trips.
  */
-export function useCircularsSearch(
-  term: string,
-  year: number | null,
-  category: string | null,
-  enabled: boolean,
-) {
+export function useCircularsSearch(term: string, year: number | null, enabled: boolean) {
   const { data: engine, isError } = useQuery({ ...circularsSearchEngineQuery(), enabled });
   const rows = useMemo(
-    () => (engine && term ? engine.search(term, { year, category }) : EMPTY_CIRCULARS),
-    [engine, term, year, category],
+    () => (engine && term ? engine.search(term, { year }) : EMPTY_CIRCULARS),
+    [engine, term, year],
   );
   return { rows, isLoadingEngine: enabled && !!term && !engine && !isError, isError };
 }

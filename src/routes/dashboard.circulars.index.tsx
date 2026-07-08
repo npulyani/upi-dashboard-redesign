@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BentoCard, CardLabel } from "@/components/upi/BentoCard";
 import { CircularSearchBox } from "@/components/upi/circulars/CircularSearchBox";
 import { CircularYearPills } from "@/components/upi/circulars/CircularYearPills";
-import { CircularCategoryPills } from "@/components/upi/circulars/CircularCategoryPills";
 import { CircularListItem } from "@/components/upi/circulars/CircularListItem";
 import { SubscribeCard } from "@/components/upi/circulars/SubscribeCard";
 import {
@@ -40,7 +39,6 @@ function CircularsPage() {
   // smooths render churn, there's no network round-trip behind it.
   const debouncedSearch = useDebouncedValue(rawSearch, 120);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   // Flips true on first focus of the search box, prefetching the corpus so
   // the index is usually ready by the first keystroke.
   const [searchIntent, setSearchIntent] = useState(false);
@@ -53,11 +51,10 @@ function CircularsPage() {
   // Browse + OC-number lookup stay on the paginated DB query; keyword mode
   // pauses it and searches the client-side corpus instead.
   const dbSearch = searchQuery?.mode === "oc_number" ? searchQuery : null;
-  const db = useCircularsInfinite(selectedYear, dbSearch, selectedCategory, !isKeywordSearch);
+  const db = useCircularsInfinite(selectedYear, dbSearch, !isKeywordSearch);
   const local = useCircularsSearch(
     isKeywordSearch ? searchQuery.term : "",
     selectedYear,
-    selectedCategory,
     searchIntent || isKeywordSearch,
   );
 
@@ -68,7 +65,7 @@ function CircularsPage() {
   const [visibleCount, setVisibleCount] = useState(SEARCH_RENDER_CHUNK);
   useEffect(() => {
     setVisibleCount(SEARCH_RENDER_CHUNK);
-  }, [debouncedSearch, selectedYear, selectedCategory]);
+  }, [debouncedSearch, selectedYear]);
   const visibleRows = isKeywordSearch ? rows.slice(0, visibleCount) : rows;
 
   const isPending = isKeywordSearch ? local.isLoadingEngine : db.isPending;
@@ -138,8 +135,6 @@ function CircularsPage() {
       />
 
       <CircularYearPills years={years} selected={selectedYear} onSelect={handleYearSelect} />
-
-      <CircularCategoryPills selected={selectedCategory} onSelect={setSelectedCategory} />
 
       <BentoCard className="!p-0 overflow-hidden">
         {isPending && rows.length === 0 ? (

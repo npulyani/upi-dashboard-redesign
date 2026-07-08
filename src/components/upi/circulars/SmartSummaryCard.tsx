@@ -50,7 +50,6 @@ export function SmartSummaryCard({ circular }: { circular: CircularRow }) {
       <p className="mt-2 text-sm sm:text-base leading-relaxed">{summary.tldr}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-1.5">
-        <Badge variant="secondary">{summary.category}</Badge>
         {summary.audience.map((a) => (
           <Badge key={a} variant="outline">
             {a}

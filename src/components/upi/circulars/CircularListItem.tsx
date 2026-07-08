@@ -130,14 +130,9 @@ export function CircularListItem({
           </p>
         )}
       </div>
-      {(isNew || row.summary_category || actionItems.length > 0) && (
+      {(isNew || actionItems.length > 0) && (
         <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5">
           {isNew && <Badge className="text-[10px]">New</Badge>}
-          {row.summary_category && (
-            <Badge variant="secondary" className="text-[10px]">
-              {row.summary_category}
-            </Badge>
-          )}
           {actionItems.length > 0 && (
             <span
               className={`font-mono text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${
