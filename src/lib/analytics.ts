@@ -76,4 +76,11 @@ export const analytics = {
   circularReferenceClicked(ocNumber: string, referencedOc: string) {
     capture("circular_reference_clicked", { oc_number: ocNumber, referenced_oc: referencedOc });
   },
+  circularSubscribeOpened() {
+    capture("circular_subscribe_opened", {});
+  },
+  // No PII in the event — just whether the POST to /api/subscribe succeeded.
+  circularSubscribeSubmitted(success: boolean) {
+    capture("circular_subscribe_submitted", { success });
+  },
 };

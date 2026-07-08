@@ -43,6 +43,10 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
           VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+          # Same secret the ingest workflow uses to reach the Railway server;
+          # here it lets the subscribe form POST to /api/subscribe. Unset →
+          # the subscribe card simply doesn't render.
+          VITE_SERVER_URL: ${{ secrets.NOTIFY_SERVER_URL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
