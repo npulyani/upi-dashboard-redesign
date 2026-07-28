@@ -3,12 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { CornerDownRight } from "lucide-react";
 import { circularRouteKey } from "@/lib/upi/circularsQueryOptions";
 import { CircularFamily } from "@/lib/upi/hooks";
-import {
-  circularDisplayName,
-  deriveSnippet,
-  isFutureDeadline,
-  isNewCircular,
-} from "@/lib/upi/circularText";
+import { circularDisplayName, deriveSnippet, isNewCircular } from "@/lib/upi/circularText";
 import { CircularRow } from "@/lib/upi/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,8 +33,6 @@ export function CircularListItem({
     () => (highlightTerm ? deriveSnippet(row.content_text, highlightTerm) : null),
     [row.content_text, highlightTerm],
   );
-  const actionItems = row.summary_action_items ?? [];
-  const hasFutureDeadline = actionItems.some((a) => isFutureDeadline(a.deadline));
   const isNew = isNewCircular(row.created_at);
 
   // Cross-reference, both directions — the family index (not this row's
@@ -130,20 +123,9 @@ export function CircularListItem({
           </p>
         )}
       </div>
-      {(isNew || actionItems.length > 0) && (
+      {isNew && (
         <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5">
-          {isNew && <Badge className="text-[10px]">New</Badge>}
-          {actionItems.length > 0 && (
-            <span
-              className={`font-mono text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${
-                hasFutureDeadline
-                  ? "bg-rose-500/10 text-rose-700"
-                  : "bg-foreground/[0.04] text-muted-foreground"
-              }`}
-            >
-              Action required
-            </span>
-          )}
+          <Badge className="text-[10px]">New</Badge>
         </div>
       )}
       <span className="font-mono text-xs text-muted-foreground flex-shrink-0 hidden sm:block mt-0.5">

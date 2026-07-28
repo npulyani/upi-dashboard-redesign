@@ -109,8 +109,6 @@ export interface CircularRow {
   summary_model?: string | null;
   summary_at?: string | null;
   summary_status?: "pending" | "done" | "failed" | "skipped";
-  /** Scoped summary key selected on the list page (keep paginated payload small). */
-  summary_action_items?: CircularActionItem[] | null;
   /**
    * When the row was first inserted (drives the 30-day "New" badge). Set by
    * the DB default on insert only — the fetch script's upsert must never

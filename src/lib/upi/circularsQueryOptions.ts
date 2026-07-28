@@ -9,10 +9,10 @@ export const CIRCULARS_PAGE_SIZE = 20;
 
 // List page: keep the paginated payload small — no content_text (it made
 // every page ~90KB+; keyword-search snippets now come from the client-side
-// corpus, see circularsSearch.ts) and only the scoped summary key the row
-// line renders (action-item deadline chip), not the full jsonb.
+// corpus, see circularsSearch.ts) and no summary jsonb, not rendered on the
+// row line.
 const CIRCULAR_LIST_COLUMNS =
-  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, created_at, summary_action_items:summary->action_items";
+  "id, npci_id, oc_number, oc_base, oc_name, file_name, doc_reference, doc_date, query_year, ocr_status, storage_path, source_url, created_at";
 
 // Detail page: single-row fetch, fine to pull the full summary jsonb.
 const CIRCULAR_DETAIL_COLUMNS =
