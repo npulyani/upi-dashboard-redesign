@@ -21,7 +21,7 @@ export const Route = createFileRoute("/dashboard/data")({
   component: DataPage,
 });
 
-type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket" | "premium";
+type SortKey = "rank" | "volume" | "value" | "share" | "mom" | "name" | "ticket" | "prevRank";
 type Row = {
   rank: number;
   app_name: string;
@@ -30,8 +30,7 @@ type Row = {
   share: number;
   mom: number | null;
   ticket: number;
-  /** Value share ÷ volume share — >1 skews to high-ticket transactions */
-  premium: number | null;
+  prevRank: number | null;
   sparkline: number[];
 };
 
@@ -73,14 +72,21 @@ function DataPage() {
     [current],
   );
 
+  const prevRankMap = useMemo(() => {
+    const m = new Map<string, number>();
+    const sorted = [...prev].sort((a, b) =>
+      metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
+    );
+    sorted.forEach((r, i) => m.set(r.app_name, i + 1));
+    return m;
+  }, [prev, metric]);
+
   const rows: Row[] = useMemo(() => {
     const prevMap = new Map(prev.map((r) => [r.app_name, r]));
     const total = current.reduce(
       (a, b) => a + (metric === "volume" ? b.cit_volume_mn : b.cit_value_cr),
       0,
     );
-    const totVol = current.reduce((a, b) => a + b.cit_volume_mn, 0);
-    const totVal = current.reduce((a, b) => a + b.cit_value_cr, 0);
     const sorted = [...current].sort((a, b) =>
       metric === "volume" ? b.cit_volume_mn - a.cit_volume_mn : b.cit_value_cr - a.cit_value_cr,
     );
@@ -96,14 +102,11 @@ function DataPage() {
         share: total ? (cur / total) * 100 : 0,
         mom: past ? ((cur - past) / past) * 100 : null,
         ticket: avgTicket(r),
-        premium:
-          totVol && totVal && r.cit_volume_mn > 0
-            ? (r.cit_value_cr / totVal) / (r.cit_volume_mn / totVol)
-            : null,
+        prevRank: prevRankMap.get(r.app_name) ?? null,
         sparkline: sparks[r.app_name] ?? [],
       };
     });
-  }, [current, prev, metric, sparks]);
+  }, [current, prev, metric, sparks, prevRankMap]);
 
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
@@ -141,9 +144,9 @@ function DataPage() {
           av = a.ticket;
           bv = b.ticket;
           break;
-        case "premium":
-          av = a.premium ?? -Infinity;
-          bv = b.premium ?? -Infinity;
+        case "prevRank":
+          av = a.prevRank ?? Infinity;
+          bv = b.prevRank ?? Infinity;
           break;
       }
       if (av < bv) return -1 * dir;
@@ -157,13 +160,13 @@ function DataPage() {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
       setSortKey(k);
-      setSortDir(k === "name" || k === "rank" ? "asc" : "desc");
+      setSortDir(k === "name" || k === "rank" || k === "prevRank" ? "asc" : "desc");
     }
   }
 
   function exportCsv() {
     analytics.csvExported(year, month, filtered.length);
-    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "Share %", "MoM %", "Avg Ticket (₹)", "Premiumness"];
+    const header = ["Rank", "App", "Volume (Mn)", "Value (Cr)", "MoM %", "Avg Ticket (₹)", "Previous Rank", "Share %"];
     const lines = [header.join(",")];
     filtered.forEach((r) => {
       lines.push(
@@ -172,10 +175,10 @@ function DataPage() {
           `"${r.app_name}"`,
           r.volume.toFixed(2),
           r.value.toFixed(2),
-          r.share.toFixed(3),
           r.mom === null ? "" : r.mom.toFixed(3),
           r.ticket.toFixed(2),
-          r.premium === null ? "" : r.premium.toFixed(3),
+          r.prevRank === null ? "" : r.prevRank,
+          r.share.toFixed(3),
         ].join(","),
       );
     });
@@ -231,17 +234,17 @@ function DataPage() {
                 <Th onClick={() => toggleSort("value")} active={sortKey === "value"} dir={sortDir} align="right">
                   Value (₹ Cr)
                 </Th>
-                <Th onClick={() => toggleSort("share")} active={sortKey === "share"} dir={sortDir} align="right">
-                  Share
-                </Th>
                 <Th onClick={() => toggleSort("mom")} active={sortKey === "mom"} dir={sortDir} align="right">
                   MoM
                 </Th>
                 <Th onClick={() => toggleSort("ticket")} active={sortKey === "ticket"} dir={sortDir} align="right">
                   Avg ticket
                 </Th>
-                <Th onClick={() => toggleSort("premium")} active={sortKey === "premium"} dir={sortDir} align="right">
-                  <span title="Value share ÷ volume share — above 1× skews to high-ticket transactions">Premium</span>
+                <Th onClick={() => toggleSort("prevRank")} active={sortKey === "prevRank"} dir={sortDir} align="right">
+                  Prev. rank
+                </Th>
+                <Th onClick={() => toggleSort("share")} active={sortKey === "share"} dir={sortDir} align="right">
+                  Share
                 </Th>
                 <th className="px-6 py-4 font-medium text-right">12-mo trend</th>
               </tr>
@@ -275,17 +278,6 @@ function DataPage() {
                   <td className="px-6 py-4 text-right font-mono tabular-nums text-sm">
                     {formatIndianNumber(r.value)}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-2 font-mono tabular-nums text-xs">
-                      <span className="hidden md:block w-16 h-1 bg-foreground/5 rounded-full overflow-hidden">
-                        <span
-                          className="block h-full bg-primary"
-                          style={{ width: `${Math.min(100, r.share)}%` }}
-                        />
-                      </span>
-                      {r.share.toFixed(2)}%
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-right font-mono text-xs tabular-nums">
                     {r.mom === null ? (
                       <span className="text-muted-foreground">—</span>
@@ -298,14 +290,19 @@ function DataPage() {
                   <td className="px-6 py-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
                     {r.ticket > 0 ? `₹${formatIndianNumber(r.ticket)}` : "—"}
                   </td>
-                  <td className="px-6 py-4 text-right font-mono text-xs tabular-nums">
-                    {r.premium === null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span className={r.premium >= 1 ? "text-foreground" : "text-muted-foreground"}>
-                        {r.premium.toFixed(2)}×
+                  <td className="px-6 py-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                    {r.prevRank === null ? "—" : `#${String(r.prevRank).padStart(2, "0")}`}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="inline-flex items-center gap-2 font-mono tabular-nums text-xs">
+                      <span className="hidden md:block w-16 h-1 bg-foreground/5 rounded-full overflow-hidden">
+                        <span
+                          className="block h-full bg-primary"
+                          style={{ width: `${Math.min(100, r.share)}%` }}
+                        />
                       </span>
-                    )}
+                      {r.share.toFixed(2)}%
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="w-24 ml-auto text-primary">
