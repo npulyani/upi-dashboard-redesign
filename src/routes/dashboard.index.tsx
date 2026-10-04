@@ -17,6 +17,7 @@ import {
   useAvailableMonths,
   useMccData,
   useMonthData,
+  useP2PM,
   usePopulations,
   useSeasonalityMatrix,
   useStatewise,
@@ -55,6 +56,27 @@ function OverviewPage() {
   const { allMonths } = useAllMonths();
   const seasonalityMatrix = useSeasonalityMatrix(metric);
   const allApps = useUniqueApps();
+  const { data: p2pm } = useP2PM();
+
+  // Headline totals use NPCI's official P2P/P2M total (upi_p2p_p2m) so they match
+  // the Spending page; months without a row there fall back to the app-level sum.
+  const officialTotals = useMemo(() => {
+    const m = new Map<string, { vol: number; val: number }>();
+    for (const r of p2pm) {
+      m.set(`${r.year}-${r.month}`, { vol: r.total_volume_mn, val: r.total_value_cr });
+    }
+    return m;
+  }, [p2pm]);
+  const totalFor = (
+    y: number | null,
+    mo: string | null,
+    rows: { cit_volume_mn: number; cit_value_cr: number }[],
+    m: "volume" | "value",
+  ) => {
+    const off = y != null && mo != null ? officialTotals.get(`${y}-${mo}`) : undefined;
+    if (off) return m === "volume" ? off.vol : off.val;
+    return rows.reduce((a, r) => a + (m === "volume" ? r.cit_volume_mn : r.cit_value_cr), 0);
+  };
 
   const trendRows = useMemo(
     () =>
@@ -85,13 +107,8 @@ function OverviewPage() {
     const startIdx = Math.max(0, endIdx - 11);
     return allMonths
       .slice(startIdx, endIdx + 1)
-      .map((b) =>
-        b.rows.reduce(
-          (sum, r) => sum + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
-          0,
-        ),
-      );
-  }, [allMonths, year, month, metric]);
+      .map((b) => totalFor(b.year, b.month, b.rows, metric));
+  }, [allMonths, year, month, metric, officialTotals]);
 
   const sorted = useMemo(
     () =>
@@ -101,30 +118,16 @@ function OverviewPage() {
     [current, metric],
   );
 
-  const total = useMemo(
-    () =>
-      sorted.reduce(
-        (acc, r) => acc + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
-        0,
-      ),
-    [sorted, metric],
-  );
-  const prevTotal = useMemo(
-    () =>
-      previous.reduce(
-        (acc, r) => acc + (metric === "volume" ? r.cit_volume_mn : r.cit_value_cr),
-        0,
-      ),
-    [previous, metric],
-  );
+  const total = totalFor(year, month, sorted, metric);
+  const prevTotal = totalFor(prevM?.year ?? null, prevM?.month ?? null, previous, metric);
   const mom = prevTotal ? ((total - prevTotal) / prevTotal) * 100 : 0;
 
   // Volume/value totals independent of the metric toggle — "This month in
   // UPI" always shows both, unlike the toggle-driven hero card below it.
-  const totalVolumeMn = useMemo(() => current.reduce((a, r) => a + r.cit_volume_mn, 0), [current]);
-  const totalValueCr = useMemo(() => current.reduce((a, r) => a + r.cit_value_cr, 0), [current]);
-  const prevVolumeMn = useMemo(() => previous.reduce((a, r) => a + r.cit_volume_mn, 0), [previous]);
-  const prevValueCr = useMemo(() => previous.reduce((a, r) => a + r.cit_value_cr, 0), [previous]);
+  const totalVolumeMn = totalFor(year, month, current, "volume");
+  const totalValueCr = totalFor(year, month, current, "value");
+  const prevVolumeMn = totalFor(prevM?.year ?? null, prevM?.month ?? null, previous, "volume");
+  const prevValueCr = totalFor(prevM?.year ?? null, prevM?.month ?? null, previous, "value");
   const momVolume = prevVolumeMn ? ((totalVolumeMn - prevVolumeMn) / prevVolumeMn) * 100 : 0;
   const momValue = prevValueCr ? ((totalValueCr - prevValueCr) / prevValueCr) * 100 : 0;
 
