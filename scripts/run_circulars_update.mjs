@@ -247,29 +247,48 @@ if (!NOTIFY_SERVER_URL || !NOTIFY_SECRET) {
 } else {
   try {
     // The endpoint responds only after its send loop (throttled to Resend's
-    // 2 req/s) finishes — generous timeout. If the subscriber list ever grows
-    // past a few hundred, move sending server-side into a background job.
-    const res = await fetch(`${NOTIFY_SERVER_URL}/api/notify-circulars`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${NOTIFY_SECRET}`, "content-type": "application/json" },
-      body: "{}",
-      signal: AbortSignal.timeout(10 * 60_000),
-    });
-    const report = await res.json().catch(() => null);
-    if (!res.ok || !report) {
-      throw new Error(`endpoint returned ${res.status}${report?.error ? `: ${report.error}` : ""}`);
+    // 2 req/s) finishes. It runs on Vercel, which caps a call at 300 s, so the
+    // endpoint stops at a 270 s budget and answers `truncated: true` — we just
+    // call again; its per-pair send log makes the continuation exact. Failed
+    // sends are retried on each pass too, hence the small pass cap.
+    const MAX_PASSES = 6;
+    let sent = 0;
+    let sendsFailed = 0;
+    let skipped = 0;
+    let truncated = false;
+    const mailed = new Set();
+    for (let pass = 1; pass <= MAX_PASSES; pass++) {
+      const res = await fetch(`${NOTIFY_SERVER_URL}/api/notify-circulars`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${NOTIFY_SECRET}`, "content-type": "application/json" },
+        body: "{}",
+        signal: AbortSignal.timeout(6 * 60_000),
+      });
+      const report = await res.json().catch(() => null);
+      if (!res.ok || !report) {
+        throw new Error(
+          `endpoint returned ${res.status}${report?.error ? `: ${report.error}` : ""}`,
+        );
+      }
+      sent += report.totals?.sent ?? 0;
+      sendsFailed = report.totals?.failed ?? 0; // last pass: what's still failing
+      skipped = report.totals?.skipped ?? 0;
+      for (const c of report.circulars) if (c.sent > 0) mailed.add(c.oc_number);
+      truncated = report.truncated === true;
+      if (!truncated) break;
     }
-    const { sent = 0, failed: sendsFailed = 0, skipped = 0 } = report.totals ?? {};
     console.log(`\nnotify: sent=${sent} failed=${sendsFailed} skipped=${skipped}`);
+    if (truncated) {
+      warnings.push("notify still had recipients pending after the pass cap (resumes next run)");
+    }
     if (sendsFailed > 0) {
       warnings.push(`${sendsFailed} notification email(s) failed to send (auto-retried next run)`);
     }
     if (sent > 0) {
-      const mailed = report.circulars.filter((c) => c.sent > 0);
       notes.push(
         "### 📬 Subscriber notifications",
         "",
-        `Sent ${sent} email(s) for: ${mailed.map((c) => c.oc_number).join(", ")}`,
+        `Sent ${sent} email(s) for: ${[...mailed].join(", ")}`,
         "",
       );
     }

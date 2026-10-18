@@ -57,10 +57,12 @@ The site owner (admin) can view and manage the subscriber list.
 
 Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
 
-- **`server/` — a small always-on Node service on Railway.** The static GitHub Pages
-  build can't hold secrets or receive webhooks, so this is the one non-static
-  piece of the stack. Plain ESM + Hono, no build step, deployed from the same
-  repo (Railway watches `server/**`). Full endpoint reference and env-var list:
+- **`server/` — a small Node service, now a Vercel serverless function.** The static
+  GitHub Pages build can't hold secrets or receive webhooks, so this is the one
+  non-static piece of the stack. Plain ESM + Hono, no build step, deployed from
+  the same repo (Vercel root directory `server`). It started on Railway and moved
+  to Vercel Hobby (free, non-commercial) in 2026-10 when the Railway plan lapsed.
+  Full endpoint reference and env-var list:
   [server/README.md](../server/README.md).
 - **Endpoints, all live:** `POST /api/subscribe` (validates, honeypot + per-IP
   rate limit, upserts a `pending` row, sends the double-opt-in email),
@@ -114,7 +116,7 @@ Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
   both run from `main`). No admin UI to build — see §3 above.
 - **Pending before this is fully live:** add `NOTIFY_SERVER_URL` +
   `NOTIFY_SECRET` as GitHub repo secrets, a `workflow_dispatch` test run on
-  this branch, redeploy the Railway service with the welcome-email commit,
+  this branch, redeploy the server with the welcome-email commit,
   then merge.
 
 ## Wireframes
@@ -258,10 +260,16 @@ Built so far (branch `circulars-email-subscription`, not yet merged to `main`):
 
 ## Tech decisions (2026-07-07)
 
-- **Interactive server on Railway** (`server/`, Node + Hono, no build step)
-  hosts the four real-time paths: subscribe, confirm, unsubscribe, Resend
-  bounce/complaint webhook. Chosen over Supabase Edge Functions to keep one
-  runtime (Node) across scripts and server; chosen over a VPS to stay managed.
+- **Interactive server** (`server/`, Node + Hono, no build step) hosts the four
+  real-time paths: subscribe, confirm, unsubscribe, Resend bounce/complaint
+  webhook. Chosen over Supabase Edge Functions to keep one runtime (Node)
+  across scripts and server; chosen over a VPS to stay managed. Hosted on
+  Railway until 2026-10, then **moved to Vercel** (free tier; Railway has none).
+  Serverless consequences: per-IP rate limit lives in the `subscribe_attempts`
+  table (no shared memory), and `/api/notify-circulars` has a 270 s budget with
+  a `truncated` flag the ingest Action loops on (Hobby kills functions at 300 s).
+  Email links use `api.upidashboard.com` so a future host change can't orphan
+  the unsubscribe links in already-sent mail.
 - **Scheduled ingestion stays on GitHub Actions** — free (public repo),
   observable (issue notifications), queued concurrency, manual dispatch.
 - **Send step revised 2026-07-08:** the Action *triggers* sending by calling

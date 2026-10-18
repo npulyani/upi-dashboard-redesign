@@ -1,5 +1,5 @@
 /**
- * Interactive server for upidashboard.com (Railway — see server/README.md).
+ * Interactive server for upidashboard.com (Vercel — see server/README.md).
  *
  * Owns the paths that need a held secret or an inbound webhook — everything
  * the static GitHub Pages build cannot do:
@@ -13,15 +13,15 @@
  * GitHub Actions; this server only answers real-time events. Reads for the
  * site keep going browser → Supabase directly — never proxy them through here.
  *
- * Local dev: `npm run dev` inside server/ (reads ../.env.local).
+ * On Vercel the default export at the bottom is the function; locally
+ * `npm run dev` inside server/ (reads ../.env.local) starts a Node listener.
  */
 
-import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createClient } from "@supabase/supabase-js";
 import { Webhook } from "svix";
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { confirmationEmail, notificationEmail, welcomeEmail, escapeHtml } from "./emails.js";
 
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
 const NOTIFY_SECRET = process.env.NOTIFY_SECRET;
 const SITE_URL = (process.env.SITE_URL ?? "https://upidashboard.com").replace(/\/$/, "");
 // The URL this server is reachable at — used to build confirm/unsubscribe
-// links in emails. On Railway: the generated (or custom) domain.
+// links in emails. On Vercel: the custom domain (api.upidashboard.com).
 const PUBLIC_SERVER_URL = (process.env.PUBLIC_SERVER_URL ?? "").replace(/\/$/, "");
 const MAIL_FROM = process.env.MAIL_FROM ?? "UPI Dashboard <circulars@mail.upidashboard.com>";
 const PORT = Number(process.env.PORT ?? 8787);
@@ -71,24 +71,39 @@ function cleanField(value, maxLen) {
   return trimmed.length > 0 && trimmed.length <= maxLen ? trimmed : null;
 }
 
-// In-memory per-IP limiter. Single Railway instance, low traffic — a Map is
-// enough; restarts wiping it is acceptable.
+// Per-IP limiter backed by the subscribe_attempts table — serverless instances
+// don't share memory, so an in-process Map would barely limit anything. Only a
+// keyed hash of the IP is stored. Fails open: if the table is missing or
+// Supabase hiccups, subscribing still works (honeypot + double opt-in remain).
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT = 5;
-const rateHits = new Map();
-function rateLimited(ip) {
-  const now = Date.now();
-  const hits = (rateHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  hits.push(now);
-  rateHits.set(ip, hits);
-  return hits.length > RATE_LIMIT;
-}
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, hits] of rateHits) {
-    if (hits.every((t) => now - t >= RATE_WINDOW_MS)) rateHits.delete(ip);
+async function rateLimited(ip) {
+  const ipHash = createHmac("sha256", SERVICE_KEY).update(ip).digest("hex");
+  const { error: insertError } = await supabase
+    .from("subscribe_attempts")
+    .insert({ ip_hash: ipHash });
+  if (insertError) {
+    console.error("rate-limit insert failed:", insertError.message);
+    return false;
   }
-}, RATE_WINDOW_MS).unref();
+  const { count, error: countError } = await supabase
+    .from("subscribe_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_hash", ipHash)
+    .gte("created_at", new Date(Date.now() - RATE_WINDOW_MS).toISOString());
+  if (countError) {
+    console.error("rate-limit count failed:", countError.message);
+    return false;
+  }
+  // Housekeeping on ~2% of calls so the table doesn't grow without bound.
+  if (Math.random() < 0.02) {
+    await supabase
+      .from("subscribe_attempts")
+      .delete()
+      .lt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+  }
+  return (count ?? 0) > RATE_LIMIT;
+}
 
 async function sendEmail({ to, subject, html, text, attachments, headers }) {
   const res = await fetch("https://api.resend.com/emails", {
@@ -116,6 +131,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Circulars created before this instant are back-catalog: never emailed, no
 // matter how empty the send log is. Same epoch-floor pattern as the NEW badge.
 const NOTIFY_EPOCH = "2026-07-08T00:00:00Z";
+
+// Time budget for one /api/notify-circulars call (see the send loop).
+const NOTIFY_BUDGET_MS = 270_000;
 
 // Constant-time bearer check (hash both sides so lengths always match).
 function bearerMatches(authorizationHeader, secret) {
@@ -172,7 +190,7 @@ app.get("/healthz", (c) => c.json({ ok: true }));
 // ---------------------------------------------------------------------------
 app.post("/api/subscribe", async (c) => {
   const ip = (c.req.header("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  if (rateLimited(ip)) {
+  if (await rateLimited(ip)) {
     return c.json({ ok: false, error: "Too many requests — please try again later." }, 429);
   }
 
@@ -465,7 +483,17 @@ app.post("/api/notify-circulars", async (c) => {
 
   const report = [];
   const totals = { sent: 0, failed: 0, skipped: 0 };
-  for (const circular of circulars) {
+  // Vercel Hobby kills a function at 300 s; a kill between "Resend accepted"
+  // and the send-log insert would mail someone twice. So stop starting new
+  // sends at the budget and say so — the caller re-calls, and the send log
+  // makes the continuation exact.
+  const deadline = Date.now() + NOTIFY_BUDGET_MS;
+  let truncated = false;
+  sendLoop: for (const circular of circulars) {
+    if (!dryRun && Date.now() > deadline) {
+      truncated = true;
+      break;
+    }
     const pending = subscribers.filter((s) => !alreadySent.has(`${circular.id}:${s.id}`));
     const entry = {
       oc_number: circular.oc_number ?? circular.file_name,
@@ -501,6 +529,10 @@ app.post("/api/notify-circulars", async (c) => {
       : `${SITE_URL}/dashboard/circulars`;
 
     for (const subscriber of pending) {
+      if (Date.now() > deadline) {
+        truncated = true;
+        break sendLoop;
+      }
       const unsubscribeUrl = `${PUBLIC_SERVER_URL}/api/unsubscribe?token=${subscriber.token}`;
       try {
         const { id: resendId } = await sendEmail({
@@ -529,7 +561,7 @@ app.post("/api/notify-circulars", async (c) => {
     }
   }
 
-  return c.json({ ok: totals.failed === 0, dry_run: dryRun, circulars: report, totals });
+  return c.json({ ok: totals.failed === 0, dry_run: dryRun, circulars: report, totals, truncated });
 });
 
 // ---------------------------------------------------------------------------
@@ -578,6 +610,13 @@ app.post("/api/webhooks/resend", async (c) => {
   return c.json({ ok: true });
 });
 
-serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`server listening on :${info.port}`);
-});
+// Vercel (VERCEL=1) runs the default export as a function and must not bind a
+// port; every other environment (local dev) starts a plain Node listener.
+if (!process.env.VERCEL) {
+  const { serve } = await import("@hono/node-server");
+  serve({ fetch: app.fetch, port: PORT }, (info) => {
+    console.log(`server listening on :${info.port}`);
+  });
+}
+
+export default app;

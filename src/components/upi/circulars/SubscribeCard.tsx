@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { analytics } from "@/lib/analytics";
 
-// The Railway server that owns the subscribe/confirm/unsubscribe flows
+// The interactive server that owns the subscribe/confirm/unsubscribe flows
 // (server/ in this repo). Unset in a build = the whole card disappears, so
 // the static site never renders a form that can't submit.
 const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, "");
