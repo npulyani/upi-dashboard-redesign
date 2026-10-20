@@ -1,4 +1,5 @@
 import { memo, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { StatewiseRow, MapMetric } from "@/lib/upi/types";
 import { formatIndianNumber } from "@/lib/upi/queries";
@@ -207,7 +208,8 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
         </Geographies>
       </ComposableMap>
 
-      {tooltip && (
+      {/* Portaled: BentoCard's entry animation leaves a transform, which would make `fixed` card-relative. */}
+      {tooltip && createPortal(
         <div
           className="pointer-events-none fixed z-50 rounded-lg border bg-popover px-3 py-2 shadow-md text-xs font-mono"
           style={{
@@ -236,7 +238,8 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
               : `₹${formatIndianNumber(tooltip.value)} Cr`}
           </p>
           <p className="text-muted-foreground">{tooltip.secondary}</p>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Legend */}
