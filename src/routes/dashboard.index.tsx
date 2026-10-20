@@ -10,6 +10,7 @@ import { BiggestMovers } from "@/components/upi/BiggestMovers";
 import { HoverTip, useHoverTip } from "@/components/upi/HoverTip";
 import { appTipLines, signedPct } from "@/lib/upi/appTip";
 import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
+import { StateMap } from "@/components/upi/StateMap";
 import { TrajectoryCard } from "@/components/upi/trends/TrajectoryCard";
 import { PremiumnessCard } from "@/components/upi/trends/PremiumnessCard";
 import { TicketSizeCard } from "@/components/upi/trends/TicketSizeCard";
@@ -365,7 +366,7 @@ function OverviewPage() {
 
         {stateLeaderboard.length > 0 ? (
           <>
-            <div className="mt-4 flex-1">
+            <div className="mt-4 flex-1 grid gap-6 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               {/* State leaderboard */}
               <ol className="overflow-y-auto h-[560px] space-y-0.5 pr-1">
                 {stateLeaderboard.map((row, i) => {
@@ -408,9 +409,10 @@ function OverviewPage() {
                   );
                 })}
               </ol>
-              {/* StateMap (src/components/upi/StateMap.tsx) intentionally not rendered:
-                  even hidden it fetched the 756KB /india-states.json topojson.
-                  Re-import and render it here when the map view returns. */}
+              {/* Map — hover a state for its figures */}
+              <div className="h-[460px] 2xl:h-[560px]">
+                <StateMap data={stateData} mapMetric={mapMetric} populations={populations} />
+              </div>
             </div>
 
             {/* Per-capita insights — shown only when per-capita mode is active */}
