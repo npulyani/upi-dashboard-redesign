@@ -48,6 +48,8 @@ interface TooltipState {
   value: number;
   secondary: string;
   rank: number;
+  tpc: number | null;
+  spc: number | null;
   x: number;
   y: number;
 }
@@ -196,6 +198,8 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
                       value,
                       secondary: getTooltipSecondary(row, npciName),
                       rank,
+                      tpc: calcPerCapita(row.volume_in_mn, npciName, populations),
+                      spc: calcSpendsPerCapita(row.value_in_cr, npciName, populations),
                       x: e.clientX,
                       y: e.clientY,
                     });
@@ -238,6 +242,16 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
               : `₹${formatIndianNumber(tooltip.value)} Cr`}
           </p>
           <p className="text-muted-foreground">{tooltip.secondary}</p>
+          <div className="mt-1.5 pt-1.5 border-t border-foreground/10 grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5">
+            <span className="text-muted-foreground">Txns / capita</span>
+            <span className="text-right text-foreground tabular-nums">
+              {tooltip.tpc != null ? tooltip.tpc.toFixed(2) : "—"}
+            </span>
+            <span className="text-muted-foreground">Spends / capita</span>
+            <span className="text-right text-foreground tabular-nums">
+              {tooltip.spc != null ? `₹${formatIndianNumber(Math.round(tooltip.spc))}` : "—"}
+            </span>
+          </div>
         </div>,
         document.body,
       )}
