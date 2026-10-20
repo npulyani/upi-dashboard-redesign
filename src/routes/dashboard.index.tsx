@@ -6,6 +6,9 @@ import { NewCircularsBanner } from "@/components/upi/NewCircularsBanner";
 import { Sparkline } from "@/components/upi/Sparkline";
 import { AppLogo } from "@/components/upi/AppLogo";
 import { RankMovers } from "@/components/upi/RankMovers";
+import { BiggestMovers } from "@/components/upi/BiggestMovers";
+import { HoverTip, useHoverTip } from "@/components/upi/HoverTip";
+import { appTipLines, signedPct } from "@/lib/upi/appTip";
 import { PerCapitaInsights } from "@/components/upi/PerCapitaInsights";
 import { TrajectoryCard } from "@/components/upi/trends/TrajectoryCard";
 import { PremiumnessCard } from "@/components/upi/trends/PremiumnessCard";
@@ -133,6 +136,11 @@ function OverviewPage() {
 
   const top4 = sorted.slice(0, 4);
   const top10 = sorted.slice(0, 10);
+  const previousByApp = useMemo(
+    () => new Map(previous.map((r) => [r.app_name, r])),
+    [previous],
+  );
+  const leaderboardTip = useHoverTip();
 
   // State leaderboard — driven by mapMetric so it always matches the map view
   const stateLeaderboard = useMemo(() => {
@@ -318,6 +326,18 @@ function OverviewPage() {
       {/* Rank movers */}
       <RankMovers current={current} previous={previous} metric={metric} delays={[300, 340]} />
 
+      {/* Biggest % movers vs previous month */}
+      {prevM && (
+        <BiggestMovers
+          current={current}
+          previous={previous}
+          metric={metric}
+          total={total}
+          prevLabel={prevM.month}
+          delay={360}
+        />
+      )}
+
       {/* India state map + leaderboard */}
       <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={380}>
         <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
@@ -417,40 +437,64 @@ function OverviewPage() {
             <h3 className="font-serif text-2xl mt-1">Leaderboard</h3>
           </div>
         </div>
-        <ol className="space-y-1 h-[560px] overflow-y-auto pr-1">
-          {top10.map((row, i) => {
-            const value = metric === "volume" ? row.cit_volume_mn : row.cit_value_cr;
-            const max = metric === "volume" ? top10[0].cit_volume_mn : top10[0].cit_value_cr;
-            const w = (value / max) * 100;
-            return (
-              <Link
-                key={row.app_name}
-                to="/dashboard/app/$appName"
-                params={{ appName: encodeURIComponent(row.app_name) }}
-                className="grid grid-cols-[28px_minmax(120px,160px)_1fr_92px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0 hover:bg-foreground/[0.03] rounded-lg px-2 -mx-2 transition-colors cursor-pointer group"
-              >
-                <span className="font-mono text-xs text-muted-foreground">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="font-medium text-sm truncate inline-flex items-center gap-2.5 group-hover:text-primary transition-colors">
-                  <AppLogo app={row.app_name} domain={row.logo_domain} size={22} />
-                  {row.app_name}
-                </span>
-                <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary/80"
-                    style={{ width: `${w}%`, transition: "width .6s cubic-bezier(.16,1,.3,1)" }}
-                  />
-                </div>
-                <span className="font-mono text-xs tabular-nums text-right">
-                  {metric === "volume"
-                    ? `${row.cit_volume_mn.toFixed(1)}M`
-                    : `₹${formatIndianNumber(row.cit_value_cr)}`}
-                </span>
-              </Link>
-            );
-          })}
-        </ol>
+        <div ref={leaderboardTip.ref} className="relative">
+          <ol className="space-y-1 h-[560px] overflow-y-auto pr-1" onScroll={leaderboardTip.hide}>
+            {top10.map((row, i) => {
+              const value = metric === "volume" ? row.cit_volume_mn : row.cit_value_cr;
+              const max = metric === "volume" ? top10[0].cit_volume_mn : top10[0].cit_value_cr;
+              const w = (value / max) * 100;
+              const prev = previousByApp.get(row.app_name);
+              const prevValue = prev ? (metric === "volume" ? prev.cit_volume_mn : prev.cit_value_cr) : 0;
+              const change = prevValue > 0 ? (value / prevValue - 1) * 100 : null;
+              return (
+                <Link
+                  key={row.app_name}
+                  to="/dashboard/app/$appName"
+                  params={{ appName: encodeURIComponent(row.app_name) }}
+                  onMouseMove={(e) =>
+                    leaderboardTip.show(e, {
+                      title: `#${i + 1} ${row.app_name} · ${month} ${year}`,
+                      lines: [
+                        ...(change != null && prevM
+                          ? [
+                              {
+                                label: `${metric === "volume" ? "Volume" : "Value"} vs ${prevM.month}`,
+                                value: signedPct(change),
+                                tone: change >= 0 ? ("up" as const) : ("down" as const),
+                              },
+                            ]
+                          : []),
+                        ...appTipLines(row, prev, metric, total, prevM?.month ?? "Prev"),
+                      ],
+                    })
+                  }
+                  onMouseLeave={leaderboardTip.hide}
+                  className="grid grid-cols-[28px_minmax(120px,160px)_1fr_92px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0 hover:bg-foreground/[0.03] rounded-lg px-2 -mx-2 transition-colors cursor-pointer group"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="font-medium text-sm truncate inline-flex items-center gap-2.5 group-hover:text-primary transition-colors">
+                    <AppLogo app={row.app_name} domain={row.logo_domain} size={22} />
+                    {row.app_name}
+                  </span>
+                  <div className="h-2 bg-foreground/5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary/80"
+                      style={{ width: `${w}%`, transition: "width .6s cubic-bezier(.16,1,.3,1)" }}
+                    />
+                  </div>
+                  <span className="font-mono text-xs tabular-nums text-right">
+                    {metric === "volume"
+                      ? `${row.cit_volume_mn.toFixed(1)}M`
+                      : `₹${formatIndianNumber(row.cit_value_cr)}`}
+                  </span>
+                </Link>
+              );
+            })}
+          </ol>
+          <HoverTip tip={leaderboardTip.tip} containerRef={leaderboardTip.ref} />
+        </div>
       </BentoCard>
 
       {/* Festival effect / seasonality heatmap */}
