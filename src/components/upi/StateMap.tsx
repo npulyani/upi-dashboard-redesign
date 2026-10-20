@@ -46,6 +46,7 @@ interface TooltipState {
   name: string;
   value: number;
   secondary: string;
+  rank: number;
   x: number;
   y: number;
 }
@@ -54,9 +55,11 @@ interface StateMapProps {
   data: StatewiseRow[];
   mapMetric: MapMetric;
   populations?: Map<string, number>;
+  /** Ordered list of NPCI names used to show rank in tooltip. */
+  rankedNames?: string[];
 }
 
-export const StateMap = memo(function StateMap({ data, mapMetric, populations = new Map() }: StateMapProps) {
+export const StateMap = memo(function StateMap({ data, mapMetric, populations = new Map(), rankedNames = [] }: StateMapProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   // Build lookup: NPCI name → row (handles regular and " Total" suffix months)
@@ -174,10 +177,10 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
                   strokeWidth={0.5}
                   style={{
                     default: { outline: "none" },
-                    hover: { outline: "none", opacity: 0.85, stroke: "#111827", strokeWidth: 1 },
+                    hover: { outline: "none", stroke: "#1d4ed8", strokeWidth: 1.5, opacity: 0.9 },
                     pressed: { outline: "none" },
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseMove={(e) => {
                     const row = getRow(geoName);
                     if (!row) return;
                     const value =
@@ -186,14 +189,14 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
                         : mapMetric === "volume"
                         ? row.volume_in_mn
                         : row.value_in_cr;
-                    // Anchor tooltip to the state's visual center
-                    const bbox = (e.target as SVGPathElement).getBoundingClientRect();
+                    const rank = rankedNames.indexOf(npciName) + 1;
                     setTooltip({
                       name: row.state_union_territory,
                       value,
                       secondary: getTooltipSecondary(row, npciName),
-                      x: bbox.left + bbox.width / 2,
-                      y: bbox.top + bbox.height / 2,
+                      rank,
+                      x: e.clientX,
+                      y: e.clientY,
                     });
                   }}
                   onMouseLeave={() => setTooltip(null)}
@@ -208,14 +211,21 @@ export const StateMap = memo(function StateMap({ data, mapMetric, populations = 
         <div
           className="pointer-events-none fixed z-50 rounded-lg border bg-popover px-3 py-2 shadow-md text-xs font-mono"
           style={{
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: "translate(-50%, -50%)",
+            left: tooltip.x + 14,
+            top: tooltip.y - 14,
+            transform: "translateY(-100%)",
           }}
         >
-          <p className="font-semibold text-foreground capitalize">
-            {tooltip.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-foreground capitalize">
+              {tooltip.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+            </p>
+            {tooltip.rank > 0 && (
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground bg-foreground/5 px-1 py-0.5 rounded">
+                #{tooltip.rank}
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground mt-0.5">
             {mapMetric === "txnsPerCapita"
               ? `${tooltip.value.toFixed(3)} txns/person/month`

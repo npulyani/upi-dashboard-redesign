@@ -327,21 +327,9 @@ function OverviewPage() {
       {/* Rank movers */}
       <RankMovers current={current} previous={previous} metric={metric} delays={[300, 340]} />
 
-      {/* Biggest % movers vs previous month */}
-      {prevM && (
-        <BiggestMovers
-          current={current}
-          previous={previous}
-          metric={metric}
-          total={total}
-          prevLabel={prevM.month}
-          delay={360}
-        />
-      )}
-
-      {/* India state map + leaderboard */}
-      <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={380}>
-        <div className="flex flex-col 2xl:flex-row 2xl:items-start justify-between gap-4">
+      {/* India state map + leaderboard — full width */}
+      <BentoCard className="col-span-12 h-full flex flex-col" delay={380}>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <CardLabel>UPI by State · {month} {year}</CardLabel>
             <h3 className="font-serif text-2xl mt-1">Geographic distribution</h3>
@@ -366,7 +354,7 @@ function OverviewPage() {
 
         {stateLeaderboard.length > 0 ? (
           <>
-            <div className="mt-4 flex-1 grid gap-6 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className="mt-4 flex-1 grid gap-6 grid-cols-1 md:grid-cols-[2fr_3fr]">
               {/* State leaderboard */}
               <ol className="overflow-y-auto h-[560px] space-y-0.5 pr-1">
                 {stateLeaderboard.map((row, i) => {
@@ -374,7 +362,7 @@ function OverviewPage() {
                   return (
                     <li
                       key={row.name}
-                      className="grid grid-cols-[28px_minmax(110px,180px)_1fr_82px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0"
+                      className="grid grid-cols-[28px_minmax(110px,1fr)_1fr_82px] items-center gap-3 py-2 border-b border-foreground/[0.04] last:border-0"
                     >
                       <span className="font-mono text-[10px] text-muted-foreground leading-none">
                         {String(i + 1).padStart(2, "0")}
@@ -410,8 +398,13 @@ function OverviewPage() {
                 })}
               </ol>
               {/* Map — hover a state for its figures */}
-              <div className="h-[460px] 2xl:h-[560px]">
-                <StateMap data={stateData} mapMetric={mapMetric} populations={populations} />
+              <div className="h-[560px]">
+                <StateMap
+                  data={stateData}
+                  mapMetric={mapMetric}
+                  populations={populations}
+                  rankedNames={stateLeaderboard.map((r) => r.name.toUpperCase())}
+                />
               </div>
             </div>
 
@@ -430,6 +423,19 @@ function OverviewPage() {
           </p>
         )}
       </BentoCard>
+
+      {/* Biggest % movers — half width, shares row with Top 10 leaderboard */}
+      {prevM && (
+        <BiggestMovers
+          current={current}
+          previous={previous}
+          metric={metric}
+          total={total}
+          prevLabel={prevM.month}
+          className="col-span-12 xl:col-span-6 min-h-[180px]"
+          delay={400}
+        />
+      )}
 
       {/* Top 10 ranked list */}
       <BentoCard className="col-span-12 xl:col-span-6 h-full flex flex-col" delay={420}>

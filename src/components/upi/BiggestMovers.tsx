@@ -19,6 +19,7 @@ export const BiggestMovers = memo(function BiggestMovers({
   metric,
   total,
   prevLabel,
+  className = "col-span-12 min-h-[180px]",
   delay = 0,
 }: {
   current: AppMonthData[];
@@ -27,6 +28,7 @@ export const BiggestMovers = memo(function BiggestMovers({
   /** Ecosystem total for the selected metric, used for share in the tooltip. */
   total: number;
   prevLabel: string;
+  className?: string;
   delay?: number;
 }) {
   const { ref, tip, show, hide } = useHoverTip();
@@ -98,7 +100,7 @@ export const BiggestMovers = memo(function BiggestMovers({
   };
 
   return (
-    <BentoCard className="col-span-12 min-h-[180px]" delay={delay}>
+    <BentoCard className={className} delay={delay}>
       <CardLabel>
         Biggest movers vs {prevLabel} · {metric === "volume" ? "volume" : "value"}
       </CardLabel>
